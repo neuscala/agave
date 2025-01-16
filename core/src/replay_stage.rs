@@ -593,6 +593,7 @@ impl ReplayStage {
             block_commitment_cache.clone(),
             rpc_subscriptions.clone(),
         );
+        // 重放
         let run_replay = move || {
             let verify_recyclers = VerifyRecyclers::default();
             let _exit = Finalizer::new(exit.clone());

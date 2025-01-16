@@ -1379,6 +1379,7 @@ pub struct AccountsDb {
     /// true if this client should skip rewrites but still include those rewrites in the bank hash as if rewrites had occurred.
     pub test_skip_rewrites_but_include_in_bank_hash: bool,
 
+    // todo accounts cache
     pub accounts_cache: AccountsCache,
 
     write_cache_limit_bytes: Option<u64>,
@@ -6344,9 +6345,10 @@ impl AccountsDb {
 
     /// true if write cache is too big
     fn should_aggressively_flush_cache(&self) -> bool {
-        self.write_cache_limit_bytes
-            .unwrap_or(WRITE_CACHE_LIMIT_BYTES_DEFAULT)
-            < self.accounts_cache.size()
+        true
+        // self.write_cache_limit_bytes
+        //     .unwrap_or(WRITE_CACHE_LIMIT_BYTES_DEFAULT)
+        //     < self.accounts_cache.size()
     }
 
     // `force_flush` flushes all the cached roots `<= requested_flush_root`. It also then
@@ -8953,7 +8955,8 @@ impl AccountsDb {
         // pass == 0 always runs and generates the index
         // pass == 1 only runs if verify == true.
         // verify checks that all the expected items are in the accounts index and measures how long it takes to look them all up
-        let passes = if verify { 2 } else { 1 };
+        // let passes = if verify { 2 } else { 1 };
+        let passes = 1;
         for pass in 0..passes {
             if pass == 0 {
                 self.accounts_index

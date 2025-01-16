@@ -463,12 +463,14 @@ fn configure_banking_trace_dir_byte_limit(
 }
 
 pub fn main() {
+    // 初始化，拿到启动项参数
     let default_args = DefaultArgs::new();
     let solana_version = solana_version::version!();
     let cli_app = app(solana_version, &default_args);
     let matches = cli_app.get_matches();
     warn_for_deprecated_arguments(&matches);
 
+    // 加载配置
     let socket_addr_space = SocketAddrSpace::new(matches.is_present("allow_private_addr"));
     let ledger_path = PathBuf::from(matches.value_of("ledger_path").unwrap());
 
@@ -1186,7 +1188,8 @@ pub fn main() {
         } else {
             TestPartitionedEpochRewards::None
         };
-
+    // todo cache 0
+    // accounts_index_config.index_limit_mb = IndexLimitMb::Limit(0);
     accounts_index_config.index_limit_mb =
         if let Ok(limit) = value_t!(matches, "accounts_index_memory_limit_mb", usize) {
             IndexLimitMb::Limit(limit)
@@ -1274,12 +1277,16 @@ pub fn main() {
         })
         .unwrap_or_default();
 
+    // 加载和配置 account db
+    // todo review
     let accounts_db_config = AccountsDbConfig {
         index: Some(accounts_index_config),
         base_working_path: Some(ledger_path.clone()),
         accounts_hash_cache_path: Some(accounts_hash_cache_path),
         shrink_paths: account_shrink_run_paths,
         read_cache_limit_bytes,
+        // todo cache 0
+        // write_cache_limit_bytes: 0u64,
         write_cache_limit_bytes: value_t!(matches, "accounts_db_cache_limit_mb", u64)
             .ok()
             .map(|mb| mb * MB as u64),
@@ -1307,6 +1314,7 @@ pub fn main() {
     };
     let starting_with_geyser_plugins: bool = on_start_geyser_plugin_config_files.is_some();
 
+    // rpc 配置
     let rpc_bigtable_config = if matches.is_present("enable_rpc_bigtable_ledger_storage")
         || matches.is_present("enable_bigtable_ledger_upload")
     {
@@ -1381,6 +1389,7 @@ pub fn main() {
         tvu_receive_threads,
     } = cli::thread_args::parse_num_threads_args(&matches);
 
+    // 配置 validator_config
     let mut validator_config = ValidatorConfig {
         require_tower: matches.is_present("require_tower"),
         tower_storage,
@@ -1688,6 +1697,7 @@ pub fn main() {
         }
     };
 
+    // 配置 snapshot
     validator_config.snapshot_config = SnapshotConfig {
         usage: if full_snapshot_archive_interval_slots == DISABLED_SNAPSHOT_ARCHIVE_INTERVAL {
             SnapshotUsage::LoadOnly
@@ -1837,6 +1847,7 @@ pub fn main() {
     let mut ledger_lock = ledger_lockfile(&ledger_path);
     let _ledger_write_guard = lock_ledger(&ledger_path, &mut ledger_lock);
 
+    // start progress
     let start_progress = Arc::new(RwLock::new(ValidatorStartProgress::default()));
     let admin_service_post_init = Arc::new(RwLock::new(None));
     let (rpc_to_plugin_manager_sender, rpc_to_plugin_manager_receiver) =
@@ -1938,6 +1949,7 @@ pub fn main() {
         num_tvu_sockets: tvu_receive_threads,
     };
 
+    // 接入集群
     let cluster_entrypoints = entrypoint_addrs
         .iter()
         .map(ContactInfo::new_gossip_entry_point)
@@ -2026,6 +2038,7 @@ pub fn main() {
     // the one pushed by bootstrap.
     node.info.hot_swap_pubkey(identity_keypair.pubkey());
 
+    // 初始化 validator
     let validator = Validator::new(
         node,
         identity_keypair,
@@ -2049,6 +2062,7 @@ pub fn main() {
         exit(1);
     });
 
+    // 初始化完成
     if let Some(filename) = init_complete_file {
         File::create(filename).unwrap_or_else(|_| {
             error!("Unable to create: {}", filename);
@@ -2056,6 +2070,7 @@ pub fn main() {
         });
     }
     info!("Validator initialized");
+    // 运行
     validator.join();
     info!("Validator exiting..");
 }
