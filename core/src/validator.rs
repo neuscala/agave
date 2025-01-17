@@ -517,6 +517,7 @@ impl Validator {
         tpu_max_connections_per_ipaddr_per_minute: u64,
         admin_rpc_service_post_init: Arc<RwLock<Option<AdminRpcRequestMetadataPostInit>>>,
     ) -> Result<Self, String> {
+        // todo review
         let start_time = Instant::now();
 
         let id = identity_keypair.pubkey();
@@ -530,10 +531,13 @@ impl Validator {
                 .map_err(|err| format!("Failed to access network stats: {err:?}"))?;
         }
 
+        // 可变，默认不可变
         let mut bank_notification_senders = Vec::new();
 
+        // 多线程共享
         let exit = Arc::new(AtomicBool::new(false));
 
+        // 插件服务
         let geyser_plugin_service =
             if let Some(geyser_plugin_config_files) = &config.on_start_geyser_plugin_config_files {
                 let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
@@ -552,6 +556,7 @@ impl Validator {
                 None
             };
 
+        // vote info
         if config.voting_disabled {
             warn!("voting disabled");
             authorized_voter_keypairs.write().unwrap().clear();
@@ -565,6 +570,7 @@ impl Validator {
             info!("entrypoint: {:?}", cluster_entrypoint);
         }
 
+        // 创建全局线程池
         if rayon::ThreadPoolBuilder::new()
             .thread_name(|i| format!("solRayonGlob{i:02}"))
             .build_global()
@@ -573,11 +579,14 @@ impl Validator {
             warn!("Rayon global thread pool already initialized");
         }
 
+        // 性能分析库 api 是否可用
         if solana_perf::perf_libs::api().is_some() {
             info!("Initializing sigverify, this could take a while...");
         } else {
             info!("Initializing sigverify...");
         }
+
+        // 验签初始化
         sigverify::init();
         info!("Initializing sigverify done.");
 
@@ -586,12 +595,16 @@ impl Validator {
                 "ledger directory does not exist or is not accessible: {ledger_path:?}"
             ));
         }
+
+        // 读取创世配置
         let genesis_config =
             open_genesis_config(ledger_path, config.max_genesis_archive_unpacked_size)
                 .map_err(|err| format!("Failed to open genesis config: {err}"))?;
 
+        // 检查
         metrics_config_sanity_check(genesis_config.cluster_type)?;
 
+        // 移除不正确的数据碎片
         if let Some(expected_shred_version) = config.expected_shred_version {
             if let Some(wait_for_supermajority_slot) = config.wait_for_supermajority {
                 *start_progress.write().unwrap() = ValidatorStartProgress::CleaningBlockStore;
@@ -699,6 +712,7 @@ impl Validator {
         let poh_timing_report_service =
             PohTimingReportService::new(poh_timing_point_receiver, exit.clone());
 
+        // 加载 blockstore
         let (
             genesis_config,
             bank_forks,
@@ -1847,12 +1861,14 @@ fn load_blockstore(
     // grows too large
     let leader_schedule_slot_offset = genesis_config.epoch_schedule.leader_schedule_slot_offset;
     let slots_per_epoch = genesis_config.epoch_schedule.slots_per_epoch;
+    // epoch 选举下一个leader的提前块数
     let leader_epoch_offset = (leader_schedule_slot_offset + slots_per_epoch - 1) / slots_per_epoch;
     assert!(leader_epoch_offset <= MAX_LEADER_SCHEDULE_EPOCH_OFFSET);
 
     let genesis_hash = genesis_config.hash();
     info!("genesis hash: {}", genesis_hash);
 
+    // 创世检查
     if let Some(expected_genesis_hash) = config.expected_genesis_hash {
         if genesis_hash != expected_genesis_hash {
             return Err(format!(
@@ -1865,10 +1881,12 @@ fn load_blockstore(
         check_poh_speed(&genesis_config, None)?;
     }
 
+    // blockstore 连接
     let mut blockstore =
         Blockstore::open_with_options(ledger_path, blockstore_options_from_config(config))
             .map_err(|err| format!("Failed to open Blockstore: {err:?}"))?;
 
+    // 信号通道
     let (ledger_signal_sender, ledger_signal_receiver) = bounded(MAX_REPLAY_WAKE_UP_SIGNALS);
     blockstore.add_new_shred_signal(ledger_signal_sender);
 
@@ -1877,6 +1895,7 @@ fn load_blockstore(
     // of blockstore root away here as soon as possible.
     let original_blockstore_root = blockstore.max_root();
 
+    // 多线程共享
     let blockstore = Arc::new(blockstore);
     let blockstore_root_scan = BlockstoreRootScan::new(config, blockstore.clone(), exit.clone());
     let halt_at_slot = config
@@ -1899,6 +1918,7 @@ fn load_blockstore(
         ..blockstore_processor::ProcessOptions::default()
     };
 
+    // false
     let enable_rpc_transaction_history =
         config.rpc_addrs.is_some() && config.rpc_config.enable_rpc_transaction_history;
     let is_plugin_transaction_history_required = transaction_notifier.as_ref().is_some();
@@ -1918,6 +1938,8 @@ fn load_blockstore(
     let entry_notifier_service = entry_notifier
         .map(|entry_notifier| EntryNotifierService::new(entry_notifier, exit.clone()));
 
+    // 加载 bank，从快照和账本中恢复数据
+    // todo review
     let (bank_forks, mut leader_schedule_cache, starting_snapshot_hashes) =
         bank_forks_utils::load_bank_forks(
             &genesis_config,
@@ -1941,9 +1963,11 @@ fn load_blockstore(
     // drop behavior can be safely synchronized with any other ongoing accounts activity like
     // cache flush, clean, shrink, as long as the same thread performing those activities also
     // is processing the dropped banks from the `pruned_banks_receiver` channel.
+    // todo bank 相当于 状态快照？repository？
     let pruned_banks_receiver =
         AccountsBackgroundService::setup_bank_drop_callback(bank_forks.clone());
 
+    // leader 计划缓存
     leader_schedule_cache.set_fixed_leader_schedule(config.fixed_leader_schedule.clone());
     {
         let mut bank_forks = bank_forks.write().unwrap();

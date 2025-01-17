@@ -2001,6 +2001,7 @@ pub fn main() {
 
     let identity_keypair = Arc::new(identity_keypair);
 
+    // 拉取快照
     let should_check_duplicate_instance = true;
     if !cluster_entrypoints.is_empty() {
         bootstrap::rpc_bootstrap(

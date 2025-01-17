@@ -173,6 +173,7 @@ pub fn load_bank_forks(
             );
             std::fs::create_dir_all(&snapshot_config.bank_snapshots_dir)
                 .expect("create bank snapshots dir");
+            // todo load bank and generating index
             let (bank_forks, starting_snapshot_hashes) = bank_forks_from_snapshot(
                 full_snapshot_archive_info,
                 incremental_snapshot_archive_info,
@@ -277,6 +278,7 @@ fn bank_forks_from_snapshot(
         }
     };
 
+    // todo review limit_load_slot_count_from_snapshot
     let bank = if let Some(fastboot_snapshot) = fastboot_snapshot {
         let (bank, _) = snapshot_bank_utils::bank_from_snapshot_dir(
             &account_paths,

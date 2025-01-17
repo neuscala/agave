@@ -8936,9 +8936,11 @@ impl AccountsDb {
         let mut total_time = Measure::start("generate_index");
         let mut slots = self.storage.all_slots();
         slots.sort_unstable();
-        if let Some(limit) = limit_load_slot_count_from_snapshot {
-            slots.truncate(limit); // get rid of the newer slots and keep just the older
-        }
+        // todo 截断
+        slots.truncate(100);
+        // if let Some(limit) = limit_load_slot_count_from_snapshot {
+        //     slots.truncate(limit); // get rid of the newer slots and keep just the older
+        // }
         let max_slot = slots.last().cloned().unwrap_or_default();
         let schedule = &genesis_config.epoch_schedule;
         let rent_collector = RentCollector::new(

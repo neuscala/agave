@@ -607,6 +607,7 @@ pub fn rpc_bootstrap(
         }
     }
 
+    // no fetch
     if bootstrap_config.no_genesis_fetch && bootstrap_config.no_snapshot_fetch {
         return;
     }
@@ -622,6 +623,7 @@ pub fn rpc_bootstrap(
         if gossip.is_none() {
             *start_progress.write().unwrap() = ValidatorStartProgress::SearchingForRpcService;
 
+            // 启动 gossip 节点
             gossip = Some(start_gossip_node(
                 identity_keypair.clone(),
                 cluster_entrypoints,
@@ -639,6 +641,7 @@ pub fn rpc_bootstrap(
         }
 
         let get_rpc_nodes_start = Instant::now();
+        // 获取可下载节点
         get_vetted_rpc_nodes(
             &mut vetted_rpc_nodes,
             &gossip.as_ref().unwrap().0,
@@ -651,6 +654,7 @@ pub fn rpc_bootstrap(
         get_rpc_nodes_time += get_rpc_nodes_start.elapsed();
 
         let snapshot_download_start = Instant::now();
+        // 下载新快照
         let download_result = attempt_download_genesis_and_snapshot(
             &rpc_contact_info,
             ledger_path,
