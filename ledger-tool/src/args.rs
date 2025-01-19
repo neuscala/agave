@@ -188,7 +188,7 @@ pub fn parse_process_options(ledger_path: &Path, arg_matches: &ArgMatches<'_>) -
         arg_matches.is_present("accounts_db_test_hash_calculation");
     let verify_index = arg_matches.is_present("verify_accounts_index");
     // todo review
-    let limit_load_slot_count_from_snapshot = Some(150000);
+    let limit_load_slot_count_from_snapshot = Some(100000);
         // value_t!(arg_matches, "limit_load_slot_count_from_snapshot", usize).ok();
     let on_halt_store_hash_raw_data_for_debug =
         arg_matches.is_present("halt_at_slot_store_hash_raw_data");
