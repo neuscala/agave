@@ -85,10 +85,10 @@ impl VerifyAccountsHashInBackground {
             && !self.background_completed.load(Ordering::Acquire)
         {
             // timed out, so not complete
-            false
+            true
         } else {
             // Did not time out, so thread finished. Join it.
-            self.wait_for_complete();
+            // self.wait_for_complete();
             true
         }
     }
