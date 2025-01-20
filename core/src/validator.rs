@@ -1116,7 +1116,7 @@ impl Validator {
                 should_send_parents: geyser_plugin_service.is_some(),
             });
             (
-                Some(json_rpc_service),
+                None,
                 pubsub_service,
                 completed_data_sets_sender,
                 completed_data_sets_service,
