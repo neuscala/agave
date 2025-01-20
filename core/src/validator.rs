@@ -1025,7 +1025,7 @@ impl Validator {
                 None
             };
 
-            let json_rpc_service: Option<JsonRpcService> = None;
+            let json_rpc_service = None;
             // let json_rpc_service = JsonRpcService::new(
             //     rpc_addr,
             //     config.rpc_config.clone(),
