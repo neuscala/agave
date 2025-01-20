@@ -1561,12 +1561,16 @@ impl Validator {
     }
 
     pub fn join(self) {
+        info!("TEST::: start join process ...");
         drop(self.bank_forks);
+        info!("TEST::: dropped bank_forks");
         drop(self.cluster_info);
+        info!("TEST::: dropped cluster_info");
 
         // todo remove services
-        self.poh_service.join().expect("poh_service");
+        // self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
+        info!("TEST::: dropped poh_recorder");
 
         // if let Some(json_rpc_service) = self.json_rpc_service {
         //     json_rpc_service.join().expect("rpc_service");
@@ -1632,12 +1636,14 @@ impl Validator {
 
         info!("TEST::: join gossip service");
         self.gossip_service.join().expect("gossip_service");
+        info!("TEST::: gossip_service joint");
         // if let Some(repair_quic_endpoint) = &self.repair_quic_endpoint {
         //     repair::quic_endpoint::close_quic_endpoint(repair_quic_endpoint);
         // }
         self.serve_repair_service
             .join()
             .expect("serve_repair_service");
+        info!("TEST::: serve_repair_service joint");
         // if let Some(repair_quic_endpoint_join_handle) = self.repair_quic_endpoint_join_handle {
         //     self.repair_quic_endpoint_runtime
         //         .map(|runtime| runtime.block_on(repair_quic_endpoint_join_handle))
@@ -1661,9 +1667,11 @@ impl Validator {
         // }
         info!("TEST::: join tpu service");
         self.tpu.join().expect("tpu");
+        info!("TEST::: tpu joint");
         // todo review
         info!("TEST::: join tvu service");
         self.tvu.join().expect("tvu");
+        info!("TEST::: tvu joint");
         // if let Some(turbine_quic_endpoint_join_handle) = self.turbine_quic_endpoint_join_handle {
         //     self.turbine_quic_endpoint_runtime
         //         .map(|runtime| runtime.block_on(turbine_quic_endpoint_join_handle))
@@ -1687,6 +1695,7 @@ impl Validator {
         self.poh_timing_report_service
             .join()
             .expect("poh_timing_report_service");
+        info!("TEST::: poh_timing_report_service joint");
         info!("TEST::: service start success!");
     }
 }
