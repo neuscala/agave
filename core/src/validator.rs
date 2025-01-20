@@ -1630,6 +1630,7 @@ impl Validator {
         //     s.join().expect("snapshot_packager_service");
         // }
 
+        info!("TEST::: join gossip service");
         self.gossip_service.join().expect("gossip_service");
         // if let Some(repair_quic_endpoint) = &self.repair_quic_endpoint {
         //     repair::quic_endpoint::close_quic_endpoint(repair_quic_endpoint);
@@ -1658,8 +1659,10 @@ impl Validator {
         // if let Some(turbine_quic_endpoint) = &self.turbine_quic_endpoint {
         //     solana_turbine::quic_endpoint::close_quic_endpoint(turbine_quic_endpoint);
         // }
+        info!("TEST::: join tpu service");
         self.tpu.join().expect("tpu");
         // todo review
+        info!("TEST::: join tvu service");
         self.tvu.join().expect("tvu");
         // if let Some(turbine_quic_endpoint_join_handle) = self.turbine_quic_endpoint_join_handle {
         //     self.turbine_quic_endpoint_runtime
@@ -1680,9 +1683,11 @@ impl Validator {
         //     geyser_plugin_service.join().expect("geyser_plugin_service");
         // }
 
+        info!("TEST::: join poh_timing_report_service");
         self.poh_timing_report_service
             .join()
             .expect("poh_timing_report_service");
+        info!("TEST::: service start success!");
     }
 }
 
