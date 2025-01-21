@@ -6345,10 +6345,9 @@ impl AccountsDb {
 
     /// true if write cache is too big
     fn should_aggressively_flush_cache(&self) -> bool {
-        true
-        // self.write_cache_limit_bytes
-        //     .unwrap_or(WRITE_CACHE_LIMIT_BYTES_DEFAULT)
-        //     < self.accounts_cache.size()
+        self.write_cache_limit_bytes
+            .unwrap_or(WRITE_CACHE_LIMIT_BYTES_DEFAULT)
+            < self.accounts_cache.size()
     }
 
     // `force_flush` flushes all the cached roots `<= requested_flush_root`. It also then
