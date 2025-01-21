@@ -11,7 +11,6 @@ use {
         ledger_lockfile, lock_ledger, new_spinner_progress_bar, println_name_value,
         redirect_stderr_to_file,
     },
-    sys_info::{Error, LoadAvg},
     clap::{crate_name, value_t, value_t_or_exit, values_t, values_t_or_exit, ArgMatches},
     console::style,
     crossbeam_channel::unbounded,
@@ -2072,24 +2071,24 @@ pub fn main() {
         });
     }
     info!("Validator initialized");
-    if let Ok(info) = sys_info::mem_info() {
-        const KB: u64 = 1_024;
-        info!(
-                "TEST:::memory-stats",
-                ("total", info.total * KB, i64),
-                ("free", info.free * KB, i64),
-                ("avail", info.avail * KB, i64),
-                ("cached", info.cached * KB, i64),
-                ("buffers", info.buffers * KB, i64),
-                ("swap_free", info.swap_free * KB, i64),
-                ("swap_total", info.swap_total * KB, i64),
-                (
-                    "used_bytes",
-                    info.total.saturating_sub(info.avail) * KB,
-                    i64
-                ),
-            )
-    }
+    // if let Ok(info) = sys_info::mem_info() {
+    //     const KB: u64 = 1_024;
+    //     info!(
+    //             "TEST:::memory-stats",
+    //             ("total", info.total * KB, i64),
+    //             ("free", info.free * KB, i64),
+    //             ("avail", info.avail * KB, i64),
+    //             ("cached", info.cached * KB, i64),
+    //             ("buffers", info.buffers * KB, i64),
+    //             ("swap_free", info.swap_free * KB, i64),
+    //             ("swap_total", info.swap_total * KB, i64),
+    //             (
+    //                 "used_bytes",
+    //                 info.total.saturating_sub(info.avail) * KB,
+    //                 i64
+    //             ),
+    //         )
+    // }
     // 运行
     validator.join();
     info!("Validator exiting..");
