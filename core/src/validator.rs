@@ -1154,13 +1154,15 @@ impl Validator {
         let stats_reporter_service =
             StatsReporterService::new(stats_reporter_receiver, exit.clone());
 
+        // todo Some(bank_forks.clone())
+        // todo Some(stats_reporter_sender.clone())
         let gossip_service = GossipService::new(
             &cluster_info,
-            Some(bank_forks.clone()),
+            None,
             node.sockets.gossip,
             config.gossip_validators.clone(),
             should_check_duplicate_instance,
-            Some(stats_reporter_sender.clone()),
+            None,
             exit.clone(),
         );
         let serve_repair = ServeRepair::new(
@@ -1568,7 +1570,7 @@ impl Validator {
         info!("TEST::: dropped cluster_info");
 
         // todo remove services
-        // self.poh_service.join().expect("poh_service");
+        self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
         info!("TEST::: dropped poh_recorder");
 
