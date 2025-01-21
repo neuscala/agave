@@ -1924,6 +1924,7 @@ impl ClusterInfo {
                     if exit.load(Ordering::Relaxed) {
                         return;
                     }
+                    //TODO: purge strategy
                     self.handle_purge(&thread_pool, bank_forks.as_deref(), &stakes);
                     entrypoints_processed = entrypoints_processed || self.process_entrypoints();
                     //TODO: possibly tune this parameter

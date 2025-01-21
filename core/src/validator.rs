@@ -1636,9 +1636,9 @@ impl Validator {
         //     s.join().expect("snapshot_packager_service");
         // }
 
-        info!("TEST::: join gossip service");
-        self.gossip_service.join().expect("gossip_service");
-        info!("TEST::: gossip_service joint");
+        // info!("TEST::: join gossip service");
+        // self.gossip_service.join().expect("gossip_service");
+        // info!("TEST::: gossip_service joint");
         // if let Some(repair_quic_endpoint) = &self.repair_quic_endpoint {
         //     repair::quic_endpoint::close_quic_endpoint(repair_quic_endpoint);
         // }
