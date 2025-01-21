@@ -2077,36 +2077,16 @@ pub fn main() {
         info!(
                 "TEST:::memory-stats",
                 ("total", info.total * KB, i64),
+                ("free", info.free * KB, i64),
+                ("avail", info.avail * KB, i64),
+                ("cached", info.cached * KB, i64),
+                ("buffers", info.buffers * KB, i64),
+                ("swap_free", info.swap_free * KB, i64),
                 ("swap_total", info.swap_total * KB, i64),
-                (
-                    "free_percent",
-                    Self::calc_percent(info.free, info.total),
-                    f64
-                ),
                 (
                     "used_bytes",
                     info.total.saturating_sub(info.avail) * KB,
                     i64
-                ),
-                (
-                    "avail_percent",
-                    Self::calc_percent(info.avail, info.total),
-                    f64
-                ),
-                (
-                    "buffers_percent",
-                    Self::calc_percent(info.buffers, info.total),
-                    f64
-                ),
-                (
-                    "cached_percent",
-                    Self::calc_percent(info.cached, info.total),
-                    f64
-                ),
-                (
-                    "swap_free_percent",
-                    Self::calc_percent(info.swap_free, info.swap_total),
-                    f64
                 ),
             )
     }
