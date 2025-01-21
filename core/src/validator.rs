@@ -1570,7 +1570,8 @@ impl Validator {
         info!("TEST::: dropped cluster_info");
 
         // todo remove services
-        // self.poh_service.join().expect("poh_service");
+        info!("TEST::: join poh_service");
+        self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
         info!("TEST::: dropped poh_recorder");
 
