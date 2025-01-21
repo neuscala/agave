@@ -479,7 +479,7 @@ pub struct Validator {
     snapshot_packager_service: Option<SnapshotPackagerService>,
     poh_recorder: Arc<RwLock<PohRecorder>>,
     poh_service: PohService,
-    tpu: Tpu,
+    tpu: Option<Tpu>,
     tvu: Tvu,
     ip_echo_server: Option<solana_net_utils::IpEchoServer>,
     pub cluster_info: Arc<ClusterInfo>,
@@ -1416,50 +1416,51 @@ impl Validator {
             };
         }
 
-        let (tpu, mut key_notifies) = Tpu::new(
-            &cluster_info,
-            &poh_recorder,
-            entry_receiver,
-            retransmit_slots_receiver,
-            TpuSockets {
-                transactions: node.sockets.tpu,
-                transaction_forwards: node.sockets.tpu_forwards,
-                vote: node.sockets.tpu_vote,
-                broadcast: node.sockets.broadcast,
-                transactions_quic: node.sockets.tpu_quic,
-                transactions_forwards_quic: node.sockets.tpu_forwards_quic,
-            },
-            &rpc_subscriptions,
-            transaction_status_sender,
-            entry_notification_sender,
-            blockstore.clone(),
-            &config.broadcast_stage_type,
-            exit,
-            node.info.shred_version(),
-            vote_tracker,
-            bank_forks.clone(),
-            verified_vote_sender,
-            gossip_verified_vote_hash_sender,
-            replay_vote_receiver,
-            replay_vote_sender,
-            bank_notification_sender.map(|sender| sender.sender),
-            config.tpu_coalesce,
-            duplicate_confirmed_slot_sender,
-            &connection_cache,
-            turbine_quic_endpoint_sender,
-            &identity_keypair,
-            config.runtime_config.log_messages_bytes_limit,
-            &staked_nodes,
-            config.staked_nodes_overrides.clone(),
-            banking_tracer,
-            tracer_thread,
-            tpu_enable_udp,
-            tpu_max_connections_per_ipaddr_per_minute,
-            &prioritization_fee_cache,
-            config.block_production_method.clone(),
-            config.enable_block_production_forwarding,
-            config.generator_config.clone(),
-        );
+        // todo optional tpu
+        // let (tpu, mut key_notifies) = Tpu::new(
+        //     &cluster_info,
+        //     &poh_recorder,
+        //     entry_receiver,
+        //     retransmit_slots_receiver,
+        //     TpuSockets {
+        //         transactions: node.sockets.tpu,
+        //         transaction_forwards: node.sockets.tpu_forwards,
+        //         vote: node.sockets.tpu_vote,
+        //         broadcast: node.sockets.broadcast,
+        //         transactions_quic: node.sockets.tpu_quic,
+        //         transactions_forwards_quic: node.sockets.tpu_forwards_quic,
+        //     },
+        //     &rpc_subscriptions,
+        //     transaction_status_sender,
+        //     entry_notification_sender,
+        //     blockstore.clone(),
+        //     &config.broadcast_stage_type,
+        //     exit,
+        //     node.info.shred_version(),
+        //     vote_tracker,
+        //     bank_forks.clone(),
+        //     verified_vote_sender,
+        //     gossip_verified_vote_hash_sender,
+        //     replay_vote_receiver,
+        //     replay_vote_sender,
+        //     bank_notification_sender.map(|sender| sender.sender),
+        //     config.tpu_coalesce,
+        //     duplicate_confirmed_slot_sender,
+        //     &connection_cache,
+        //     turbine_quic_endpoint_sender,
+        //     &identity_keypair,
+        //     config.runtime_config.log_messages_bytes_limit,
+        //     &staked_nodes,
+        //     config.staked_nodes_overrides.clone(),
+        //     banking_tracer,
+        //     tracer_thread,
+        //     tpu_enable_udp,
+        //     tpu_max_connections_per_ipaddr_per_minute,
+        //     &prioritization_fee_cache,
+        //     config.block_production_method.clone(),
+        //     config.enable_block_production_forwarding,
+        //     config.generator_config.clone(),
+        // );
 
         datapoint_info!(
             "validator-new",
@@ -1472,18 +1473,18 @@ impl Validator {
         );
 
         *start_progress.write().unwrap() = ValidatorStartProgress::Running;
-        key_notifies.push(connection_cache);
+        // key_notifies.push(connection_cache);
 
-        *admin_rpc_service_post_init.write().unwrap() = Some(AdminRpcRequestMetadataPostInit {
-            bank_forks: bank_forks.clone(),
-            cluster_info: cluster_info.clone(),
-            vote_account: *vote_account,
-            repair_whitelist: config.repair_whitelist.clone(),
-            notifies: key_notifies,
-            repair_socket: Arc::new(node.sockets.repair),
-            outstanding_repair_requests,
-            cluster_slots,
-        });
+        // *admin_rpc_service_post_init.write().unwrap() = Some(AdminRpcRequestMetadataPostInit {
+        //     bank_forks: bank_forks.clone(),
+        //     cluster_info: cluster_info.clone(),
+        //     vote_account: *vote_account,
+        //     repair_whitelist: config.repair_whitelist.clone(),
+        //     notifies: key_notifies,
+        //     repair_socket: Arc::new(node.sockets.repair),
+        //     outstanding_repair_requests,
+        //     cluster_slots,
+        // });
 
         Ok(Self {
             stats_reporter_service,
@@ -1502,7 +1503,7 @@ impl Validator {
             poh_timing_report_service,
             snapshot_packager_service,
             completed_data_sets_service,
-            tpu,
+            None,
             tvu,
             poh_service,
             poh_recorder,
