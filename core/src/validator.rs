@@ -1565,6 +1565,9 @@ impl Validator {
     }
 
     pub fn join(self) {
+        info!("TEST::: sleeping ... ");
+        sleep(Duration::from_secs(1200));
+        info!("TEST::: sleeping end, no oom, continue run");
         info!("TEST::: start join process ...");
         drop(self.bank_forks);
         info!("TEST::: dropped bank_forks");
@@ -1576,9 +1579,6 @@ impl Validator {
         // self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
         info!("TEST::: dropped poh_recorder");
-        info!("TEST::: sleeping ... ");
-        sleep(Duration::from_secs(600));
-        info!("TEST::: sleeping end, no oom, continue run");
 
         // if let Some(json_rpc_service) = self.json_rpc_service {
         //     json_rpc_service.join().expect("rpc_service");
