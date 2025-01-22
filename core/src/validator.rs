@@ -461,7 +461,7 @@ struct TransactionHistoryServices {
 
 pub struct Validator {
     validator_exit: Arc<RwLock<Exit>>,
-    // json_rpc_service: Option<JsonRpcService>,
+    json_rpc_service: Option<JsonRpcService>,
     // pubsub_service: Option<PubSubService>,
     // rpc_completed_slots_service: Option<JoinHandle<()>>,
     // optimistically_confirmed_bank_tracker: Option<OptimisticallyConfirmedBankTracker>,
@@ -1089,15 +1089,16 @@ impl Validator {
             let rpc_completed_slots_service = if !config.rpc_config.full_api {
                 None
             } else {
-                let (completed_slots_sender, completed_slots_receiver) =
-                    bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
-                blockstore.add_completed_slots_signal(completed_slots_sender);
-
-                Some(RpcCompletedSlotsService::spawn(
-                    completed_slots_receiver,
-                    rpc_subscriptions.clone(),
-                    exit.clone(),
-                ))
+                None
+                // let (completed_slots_sender, completed_slots_receiver) =
+                //     bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
+                // blockstore.add_completed_slots_signal(completed_slots_sender);
+                //
+                // Some(RpcCompletedSlotsService::spawn(
+                //     completed_slots_receiver,
+                //     rpc_subscriptions.clone(),
+                //     exit.clone(),
+                // ))
             };
 
             let optimistically_confirmed_bank_tracker =
@@ -1490,7 +1491,7 @@ impl Validator {
             stats_reporter_service,
             gossip_service,
             serve_repair_service,
-            // json_rpc_service,
+            json_rpc_service,
             // pubsub_service,
             // rpc_completed_slots_service,
             // optimistically_confirmed_bank_tracker,
