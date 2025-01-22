@@ -1004,7 +1004,7 @@ impl Validator {
             pubsub_service,
             completed_data_sets_sender,
             completed_data_sets_service,
-            rpc_completed_slots_service,
+            // rpc_completed_slots_service,
             optimistically_confirmed_bank_tracker,
             bank_notification_sender,
         ) = if let Some((rpc_addr, rpc_pubsub_addr)) = config.rpc_addrs {
@@ -1086,20 +1086,20 @@ impl Validator {
                     )
                 };
 
-            let rpc_completed_slots_service = if !config.rpc_config.full_api {
-                None
-            } else {
-                None
-                // let (completed_slots_sender, completed_slots_receiver) =
-                //     bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
-                // blockstore.add_completed_slots_signal(completed_slots_sender);
-                //
-                // Some(RpcCompletedSlotsService::spawn(
-                //     completed_slots_receiver,
-                //     rpc_subscriptions.clone(),
-                //     exit.clone(),
-                // ))
-            };
+            // let rpc_completed_slots_service = if !config.rpc_config.full_api {
+            //     None
+            // } else {
+            //     None
+            //     let (completed_slots_sender, completed_slots_receiver) =
+            //         bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
+            //     blockstore.add_completed_slots_signal(completed_slots_sender);
+            //
+            //     Some(RpcCompletedSlotsService::spawn(
+            //         completed_slots_receiver,
+            //         rpc_subscriptions.clone(),
+            //         exit.clone(),
+            //     ))
+            // };
 
             let optimistically_confirmed_bank_tracker =
                 Some(OptimisticallyConfirmedBankTracker::new(
@@ -1120,12 +1120,12 @@ impl Validator {
                 pubsub_service,
                 completed_data_sets_sender,
                 completed_data_sets_service,
-                rpc_completed_slots_service,
+                // rpc_completed_slots_service,
                 optimistically_confirmed_bank_tracker,
                 bank_notification_sender_config,
             )
         } else {
-            (None, None, None, None, None, None, None)
+            (None, None, None, None, None, None)
         };
 
         if config.halt_at_slot.is_some() {
