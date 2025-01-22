@@ -461,16 +461,16 @@ struct TransactionHistoryServices {
 
 pub struct Validator {
     validator_exit: Arc<RwLock<Exit>>,
-    json_rpc_service: Option<JsonRpcService>,
-    pubsub_service: Option<PubSubService>,
-    rpc_completed_slots_service: Option<JoinHandle<()>>,
-    optimistically_confirmed_bank_tracker: Option<OptimisticallyConfirmedBankTracker>,
-    transaction_status_service: Option<TransactionStatusService>,
-    rewards_recorder_service: Option<RewardsRecorderService>,
-    cache_block_meta_service: Option<CacheBlockMetaService>,
-    entry_notifier_service: Option<EntryNotifierService>,
-    system_monitor_service: Option<SystemMonitorService>,
-    sample_performance_service: Option<SamplePerformanceService>,
+    // json_rpc_service: Option<JsonRpcService>,
+    // pubsub_service: Option<PubSubService>,
+    // rpc_completed_slots_service: Option<JoinHandle<()>>,
+    // optimistically_confirmed_bank_tracker: Option<OptimisticallyConfirmedBankTracker>,
+    // transaction_status_service: Option<TransactionStatusService>,
+    // rewards_recorder_service: Option<RewardsRecorderService>,
+    // cache_block_meta_service: Option<CacheBlockMetaService>,
+    // entry_notifier_service: Option<EntryNotifierService>,
+    // system_monitor_service: Option<SystemMonitorService>,
+    // sample_performance_service: Option<SamplePerformanceService>,
     poh_timing_report_service: PohTimingReportService,
     stats_reporter_service: StatsReporterService,
     gossip_service: GossipService,
@@ -1490,16 +1490,16 @@ impl Validator {
             stats_reporter_service,
             gossip_service,
             serve_repair_service,
-            json_rpc_service,
-            pubsub_service,
-            rpc_completed_slots_service,
-            optimistically_confirmed_bank_tracker,
-            transaction_status_service,
-            rewards_recorder_service,
-            cache_block_meta_service,
-            entry_notifier_service,
-            system_monitor_service,
-            sample_performance_service,
+            // json_rpc_service,
+            // pubsub_service,
+            // rpc_completed_slots_service,
+            // optimistically_confirmed_bank_tracker,
+            // transaction_status_service,
+            // rewards_recorder_service,
+            // cache_block_meta_service,
+            // entry_notifier_service,
+            // system_monitor_service,
+            // sample_performance_service,
             poh_timing_report_service,
             snapshot_packager_service,
             completed_data_sets_service,
@@ -1571,8 +1571,8 @@ impl Validator {
         info!("TEST::: dropped cluster_info");
 
         // todo remove services
-        info!("TEST::: join poh_service");
-        self.poh_service.join().expect("poh_service");
+        // info!("TEST::: join poh_service");
+        // self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
         info!("TEST::: dropped poh_recorder");
 
@@ -1638,9 +1638,9 @@ impl Validator {
         //     s.join().expect("snapshot_packager_service");
         // }
 
-        // info!("TEST::: join gossip service");
-        // self.gossip_service.join().expect("gossip_service");
-        // info!("TEST::: gossip_service joint");
+        info!("TEST::: join gossip service");
+        self.gossip_service.join().expect("gossip_service");
+        info!("TEST::: gossip_service joint");
         // if let Some(repair_quic_endpoint) = &self.repair_quic_endpoint {
         //     repair::quic_endpoint::close_quic_endpoint(repair_quic_endpoint);
         // }
