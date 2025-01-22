@@ -109,38 +109,38 @@ impl PohService {
             .spawn(move || {
                 if poh_config.hashes_per_tick.is_none() {
                     if poh_config.target_tick_count.is_none() {
-                        // Self::low_power_tick_producer(
-                        //     poh_recorder,
-                        //     &poh_config,
-                        //     &poh_exit,
-                        //     record_receiver,
-                        // );
+                        Self::low_power_tick_producer(
+                            poh_recorder,
+                            &poh_config,
+                            &poh_exit,
+                            record_receiver,
+                        );
                     } else {
-                        // Self::short_lived_low_power_tick_producer(
-                        //     poh_recorder,
-                        //     &poh_config,
-                        //     &poh_exit,
-                        //     record_receiver,
-                        // );
+                        Self::short_lived_low_power_tick_producer(
+                            poh_recorder,
+                            &poh_config,
+                            &poh_exit,
+                            record_receiver,
+                        );
                     }
                 } else {
                     // PoH service runs in a tight loop, generating hashes as fast as possible.
                     // Let's dedicate one of the CPU cores to this thread so that it can gain
                     // from cache performance.
-                    // if let Some(cores) = core_affinity::get_core_ids() {
-                    //     core_affinity::set_for_current(cores[pinned_cpu_core]);
-                    // }
-                    // Self::tick_producer(
-                    //     poh_recorder,
-                    //     &poh_exit,
-                    //     ticks_per_slot,
-                    //     hashes_per_batch,
-                    //     record_receiver,
-                    //     Self::target_ns_per_tick(
-                    //         ticks_per_slot,
-                    //         poh_config.target_tick_duration.as_nanos() as u64,
-                    //     ),
-                    // );
+                    if let Some(cores) = core_affinity::get_core_ids() {
+                        core_affinity::set_for_current(cores[pinned_cpu_core]);
+                    }
+                    Self::tick_producer(
+                        poh_recorder,
+                        &poh_exit,
+                        ticks_per_slot,
+                        hashes_per_batch,
+                        record_receiver,
+                        Self::target_ns_per_tick(
+                            ticks_per_slot,
+                            poh_config.target_tick_duration.as_nanos() as u64,
+                        ),
+                    );
                 }
                 poh_exit.store(true, Ordering::Relaxed);
             })
