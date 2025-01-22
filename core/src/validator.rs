@@ -1216,12 +1216,13 @@ impl Validator {
             "New shred signal for the TVU should be the same as the clear bank signal."
         );
 
-        let vote_tracker = Arc::<VoteTracker>::default();
-
-        let (retransmit_slots_sender, retransmit_slots_receiver) = unbounded();
-        let (verified_vote_sender, verified_vote_receiver) = unbounded();
-        let (gossip_verified_vote_hash_sender, gossip_verified_vote_hash_receiver) = unbounded();
-        let (duplicate_confirmed_slot_sender, duplicate_confirmed_slots_receiver) = unbounded();
+        // todo tvu related
+        // let vote_tracker = Arc::<VoteTracker>::default();
+        //
+        // let (retransmit_slots_sender, retransmit_slots_receiver) = unbounded();
+        // let (verified_vote_sender, verified_vote_receiver) = unbounded();
+        // let (gossip_verified_vote_hash_sender, gossip_verified_vote_hash_receiver) = unbounded();
+        // let (duplicate_confirmed_slot_sender, duplicate_confirmed_slots_receiver) = unbounded();
 
         let (banking_tracer, tracer_thread) =
             BankingTracer::new((config.banking_trace_dir_byte_limit > 0).then_some((
@@ -1239,9 +1240,9 @@ impl Validator {
             info!("Disabled banking trace");
         }
 
-        let entry_notification_sender = entry_notifier_service
-            .as_ref()
-            .map(|service| service.sender_cloned());
+        // let entry_notification_sender = entry_notifier_service
+        //     .as_ref()
+        //     .map(|service| service.sender_cloned());
 
         // test-validator crate may start the validator in a tokio runtime
         // context which forces us to use the same runtime because a nested
