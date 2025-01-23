@@ -543,22 +543,23 @@ impl Validator {
         // 插件服务
         // 设置为空
         let geyser_plugin_service = None;
-            // if let Some(geyser_plugin_config_files) = &config.on_start_geyser_plugin_config_files {
-            //     let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
-            //     bank_notification_senders.push(confirmed_bank_sender);
-            //     let rpc_to_plugin_manager_receiver_and_exit =
-            //         rpc_to_plugin_manager_receiver.map(|receiver| (receiver, exit.clone()));
-            //     Some(
-            //         GeyserPluginService::new_with_receiver(
-            //             confirmed_bank_receiver,
-            //             geyser_plugin_config_files,
-            //             rpc_to_plugin_manager_receiver_and_exit,
-            //         )
-            //         .map_err(|err| format!("Failed to load the Geyser plugin: {err:?}"))?,
-            //     )
-            // } else {
-            //     None
-            // };
+            if let Some(geyser_plugin_config_files) = &config.on_start_geyser_plugin_config_files {
+                None
+                // let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
+                // bank_notification_senders.push(confirmed_bank_sender);
+                // let rpc_to_plugin_manager_receiver_and_exit =
+                //     rpc_to_plugin_manager_receiver.map(|receiver| (receiver, exit.clone()));
+                // Some(
+                //     GeyserPluginService::new_with_receiver(
+                //         confirmed_bank_receiver,
+                //         geyser_plugin_config_files,
+                //         rpc_to_plugin_manager_receiver_and_exit,
+                //     )
+                //     .map_err(|err| format!("Failed to load the Geyser plugin: {err:?}"))?,
+                // )
+            } else {
+                None
+            };
 
         // vote info
         // 不投票， authorized_voter_keypairs 清空
