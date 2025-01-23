@@ -1041,131 +1041,130 @@ impl Validator {
             // rpc_completed_slots_service,
             optimistically_confirmed_bank_tracker,
             bank_notification_sender,
-        ) = (None, None, None, None, None, None);
-        //     if let Some((rpc_addr, rpc_pubsub_addr)) = config.rpc_addrs {
-        //     assert_eq!(
-        //         node.info
-        //             .rpc()
-        //             .map(|addr| socket_addr_space.check(&addr))
-        //             .ok(),
-        //         node.info
-        //             .rpc_pubsub()
-        //             .map(|addr| socket_addr_space.check(&addr))
-        //             .ok()
-        //     );
-        //     let (bank_notification_sender, bank_notification_receiver) = unbounded();
-        //     let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
-        //         Some(Arc::new(RwLock::new(bank_notification_senders)))
-        //     } else {
-        //         None
-        //     };
-        //
-        //     // let json_rpc_service = JsonRpcService::new(
-        //     //     rpc_addr,
-        //     //     config.rpc_config.clone(),
-        //     //     Some(config.snapshot_config.clone()),
-        //     //     bank_forks.clone(),
-        //     //     block_commitment_cache.clone(),
-        //     //     blockstore.clone(),
-        //     //     cluster_info.clone(),
-        //     //     Some(poh_recorder.clone()),
-        //     //     genesis_config.hash(),
-        //     //     ledger_path,
-        //     //     config.validator_exit.clone(),
-        //     //     exit.clone(),
-        //     //     rpc_override_health_check.clone(),
-        //     //     startup_verification_complete,
-        //     //     optimistically_confirmed_bank.clone(),
-        //     //     config.send_transaction_service_config.clone(),
-        //     //     max_slots.clone(),
-        //     //     leader_schedule_cache.clone(),
-        //     //     connection_cache.clone(),
-        //     //     max_complete_transaction_status_slot,
-        //     //     max_complete_rewards_slot,
-        //     //     prioritization_fee_cache.clone(),
-        //     // )?;
-        //
-        //     // 当前无 full api
-        //     let pubsub_service = None;
-        //     //     if !config.rpc_config.full_api {
-        //     //     None
-        //     // } else {
-        //     //     let (trigger, pubsub_service) = PubSubService::new(
-        //     //         config.pubsub_config.clone(),
-        //     //         &rpc_subscriptions,
-        //     //         rpc_pubsub_addr,
-        //     //     );
-        //     //     config
-        //     //         .validator_exit
-        //     //         .write()
-        //     //         .unwrap()
-        //     //         .register_exit(Box::new(move || trigger.cancel()));
-        //     //
-        //     //     Some(pubsub_service)
-        //     // };
-        //
-        //     // 当前无 full api
-        //     let (completed_data_sets_sender, completed_data_sets_service) = (None, None);
-        //         // if !config.rpc_config.full_api {
-        //         //     (None, None)
-        //         // } else {
-        //         //     let (completed_data_sets_sender, completed_data_sets_receiver) =
-        //         //         bounded(MAX_COMPLETED_DATA_SETS_IN_CHANNEL);
-        //         //     let completed_data_sets_service = CompletedDataSetsService::new(
-        //         //         completed_data_sets_receiver,
-        //         //         blockstore.clone(),
-        //         //         rpc_subscriptions.clone(),
-        //         //         exit.clone(),
-        //         //         max_slots.clone(),
-        //         //     );
-        //         //     (
-        //         //         Some(completed_data_sets_sender),
-        //         //         Some(completed_data_sets_service),
-        //         //     )
-        //         // };
-        //
-        //     // let rpc_completed_slots_service = if !config.rpc_config.full_api {
-        //     //     None
-        //     // } else {
-        //     //     None
-        //     //     let (completed_slots_sender, completed_slots_receiver) =
-        //     //         bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
-        //     //     blockstore.add_completed_slots_signal(completed_slots_sender);
-        //     //
-        //     //     Some(RpcCompletedSlotsService::spawn(
-        //     //         completed_slots_receiver,
-        //     //         rpc_subscriptions.clone(),
-        //     //         exit.clone(),
-        //     //     ))
-        //     // };
-        //
-        //     // 订阅相关，先删掉
-        //     let optimistically_confirmed_bank_tracker = None;
-        //         // Some(OptimisticallyConfirmedBankTracker::new(
-        //         //     bank_notification_receiver,
-        //         //     exit.clone(),
-        //         //     bank_forks.clone(),
-        //         //     optimistically_confirmed_bank,
-        //         //     rpc_subscriptions.clone(),
-        //         //     confirmed_bank_subscribers,
-        //         //     prioritization_fee_cache.clone(),
-        //         // ));
-        //     let bank_notification_sender_config = Some(BankNotificationSenderConfig {
-        //         sender: bank_notification_sender,
-        //         should_send_parents: geyser_plugin_service.is_some(),
-        //     });
-        //     (
-        //         None,
-        //         pubsub_service,
-        //         completed_data_sets_sender,
-        //         completed_data_sets_service,
-        //         // rpc_completed_slots_service,
-        //         optimistically_confirmed_bank_tracker,
-        //         bank_notification_sender_config,
-        //     )
-        // } else {
-        //     (None, None, None, None, None, None)
-        // };
+        ) = if let Some((rpc_addr, rpc_pubsub_addr)) = config.rpc_addrs {
+            assert_eq!(
+                node.info
+                    .rpc()
+                    .map(|addr| socket_addr_space.check(&addr))
+                    .ok(),
+                node.info
+                    .rpc_pubsub()
+                    .map(|addr| socket_addr_space.check(&addr))
+                    .ok()
+            );
+            let (bank_notification_sender, bank_notification_receiver) = unbounded();
+            // let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
+            //     Some(Arc::new(RwLock::new(bank_notification_senders)))
+            // } else {
+            //     None
+            // };
+
+            // let json_rpc_service = JsonRpcService::new(
+            //     rpc_addr,
+            //     config.rpc_config.clone(),
+            //     Some(config.snapshot_config.clone()),
+            //     bank_forks.clone(),
+            //     block_commitment_cache.clone(),
+            //     blockstore.clone(),
+            //     cluster_info.clone(),
+            //     Some(poh_recorder.clone()),
+            //     genesis_config.hash(),
+            //     ledger_path,
+            //     config.validator_exit.clone(),
+            //     exit.clone(),
+            //     rpc_override_health_check.clone(),
+            //     startup_verification_complete,
+            //     optimistically_confirmed_bank.clone(),
+            //     config.send_transaction_service_config.clone(),
+            //     max_slots.clone(),
+            //     leader_schedule_cache.clone(),
+            //     connection_cache.clone(),
+            //     max_complete_transaction_status_slot,
+            //     max_complete_rewards_slot,
+            //     prioritization_fee_cache.clone(),
+            // )?;
+
+            // 当前无 full api
+            let pubsub_service = None;
+            //     if !config.rpc_config.full_api {
+            //     None
+            // } else {
+            //     let (trigger, pubsub_service) = PubSubService::new(
+            //         config.pubsub_config.clone(),
+            //         &rpc_subscriptions,
+            //         rpc_pubsub_addr,
+            //     );
+            //     config
+            //         .validator_exit
+            //         .write()
+            //         .unwrap()
+            //         .register_exit(Box::new(move || trigger.cancel()));
+            //
+            //     Some(pubsub_service)
+            // };
+
+            // 当前无 full api
+            let (completed_data_sets_sender, completed_data_sets_service) = (None, None);
+                // if !config.rpc_config.full_api {
+                //     (None, None)
+                // } else {
+                //     let (completed_data_sets_sender, completed_data_sets_receiver) =
+                //         bounded(MAX_COMPLETED_DATA_SETS_IN_CHANNEL);
+                //     let completed_data_sets_service = CompletedDataSetsService::new(
+                //         completed_data_sets_receiver,
+                //         blockstore.clone(),
+                //         rpc_subscriptions.clone(),
+                //         exit.clone(),
+                //         max_slots.clone(),
+                //     );
+                //     (
+                //         Some(completed_data_sets_sender),
+                //         Some(completed_data_sets_service),
+                //     )
+                // };
+
+            // let rpc_completed_slots_service = if !config.rpc_config.full_api {
+            //     None
+            // } else {
+            //     None
+            //     let (completed_slots_sender, completed_slots_receiver) =
+            //         bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
+            //     blockstore.add_completed_slots_signal(completed_slots_sender);
+            //
+            //     Some(RpcCompletedSlotsService::spawn(
+            //         completed_slots_receiver,
+            //         rpc_subscriptions.clone(),
+            //         exit.clone(),
+            //     ))
+            // };
+
+            // 订阅相关，先删掉
+            let optimistically_confirmed_bank_tracker = None;
+                // Some(OptimisticallyConfirmedBankTracker::new(
+                //     bank_notification_receiver,
+                //     exit.clone(),
+                //     bank_forks.clone(),
+                //     optimistically_confirmed_bank,
+                //     rpc_subscriptions.clone(),
+                //     confirmed_bank_subscribers,
+                //     prioritization_fee_cache.clone(),
+                // ));
+            let bank_notification_sender_config = Some(BankNotificationSenderConfig {
+                sender: bank_notification_sender,
+                should_send_parents: geyser_plugin_service.is_some(),
+            });
+            (
+                None,
+                pubsub_service,
+                completed_data_sets_sender,
+                completed_data_sets_service,
+                // rpc_completed_slots_service,
+                optimistically_confirmed_bank_tracker,
+                bank_notification_sender_config,
+            )
+        } else {
+            (None, None, None, None, None, None)
+        };
 
         // 达到指定slot退出
         if config.halt_at_slot.is_some() {
