@@ -542,21 +542,20 @@ impl Validator {
 
         // 插件服务
         // 设置为空
-        let geyser_plugin_service = None;
+        let geyser_plugin_service =
             if let Some(geyser_plugin_config_files) = &config.on_start_geyser_plugin_config_files {
-                None
-                // let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
-                // bank_notification_senders.push(confirmed_bank_sender);
-                // let rpc_to_plugin_manager_receiver_and_exit =
-                //     rpc_to_plugin_manager_receiver.map(|receiver| (receiver, exit.clone()));
-                // Some(
-                //     GeyserPluginService::new_with_receiver(
-                //         confirmed_bank_receiver,
-                //         geyser_plugin_config_files,
-                //         rpc_to_plugin_manager_receiver_and_exit,
-                //     )
-                //     .map_err(|err| format!("Failed to load the Geyser plugin: {err:?}"))?,
-                // )
+                let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
+                bank_notification_senders.push(confirmed_bank_sender);
+                let rpc_to_plugin_manager_receiver_and_exit =
+                    rpc_to_plugin_manager_receiver.map(|receiver| (receiver, exit.clone()));
+                Some(
+                    GeyserPluginService::new_with_receiver(
+                        confirmed_bank_receiver,
+                        geyser_plugin_config_files,
+                        rpc_to_plugin_manager_receiver_and_exit,
+                    )
+                    .map_err(|err| format!("Failed to load the Geyser plugin: {err:?}"))?,
+                )
             } else {
                 None
             };
@@ -686,6 +685,7 @@ impl Validator {
         }
 
         // 插件服务，目前都关闭了
+        info!("TEST:::Geyser plugin: geyser_plugin_service: {} ",geyser_plugin_service.is_some());
         let accounts_update_notifier = geyser_plugin_service
             .as_ref()
             .and_then(|geyser_plugin_service| geyser_plugin_service.get_accounts_update_notifier());
