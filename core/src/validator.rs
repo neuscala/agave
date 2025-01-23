@@ -1085,23 +1085,22 @@ impl Validator {
             // )?;
 
             // 当前无 full api
-            let pubsub_service = None;
-            //     if !config.rpc_config.full_api {
-            //     None
-            // } else {
-            //     let (trigger, pubsub_service) = PubSubService::new(
-            //         config.pubsub_config.clone(),
-            //         &rpc_subscriptions,
-            //         rpc_pubsub_addr,
-            //     );
-            //     config
-            //         .validator_exit
-            //         .write()
-            //         .unwrap()
-            //         .register_exit(Box::new(move || trigger.cancel()));
-            //
-            //     Some(pubsub_service)
-            // };
+            let pubsub_service = if !config.rpc_config.full_api {
+                None
+            } else {
+                let (trigger, pubsub_service) = PubSubService::new(
+                    config.pubsub_config.clone(),
+                    &rpc_subscriptions,
+                    rpc_pubsub_addr,
+                );
+                config
+                    .validator_exit
+                    .write()
+                    .unwrap()
+                    .register_exit(Box::new(move || trigger.cancel()));
+
+                Some(pubsub_service)
+            };
 
             // 当前无 full api
             let (completed_data_sets_sender, completed_data_sets_service) = (None, None);
