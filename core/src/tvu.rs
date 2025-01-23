@@ -69,7 +69,7 @@ pub struct Tvu {
     replay_stage: ReplayStage,
     blockstore_cleanup_service: Option<BlockstoreCleanupService>,
     cost_update_service: CostUpdateService,
-    voting_service: VotingService,
+    // voting_service: VotingService,
     warm_quic_cache_service: Option<WarmQuicCacheService>,
     drop_bank_service: DropBankService,
     duplicate_shred_listener: DuplicateShredListener,
@@ -160,6 +160,7 @@ impl Tvu {
         cluster_slots: Arc<ClusterSlots>,
         wen_restart_repair_slots: Option<Arc<RwLock<Vec<Slot>>>>,
     ) -> Result<Self, String> {
+        // 初始化 sockets
         let TvuSockets {
             repair: repair_socket,
             fetch: fetch_sockets,
@@ -167,6 +168,7 @@ impl Tvu {
             ancestor_hashes_requests: ancestor_hashes_socket,
         } = sockets;
 
+        // 同步
         let (fetch_sender, fetch_receiver) = unbounded();
 
         let repair_socket = Arc::new(repair_socket);
@@ -174,6 +176,8 @@ impl Tvu {
         let fetch_sockets: Vec<Arc<UdpSocket>> = fetch_sockets.into_iter().map(Arc::new).collect();
         let (repair_quic_endpoint_response_sender, repair_quic_endpoint_response_receiver) =
             unbounded();
+
+        // fetch_stage
         let fetch_stage = ShredFetchStage::new(
             fetch_sockets,
             turbine_quic_endpoint_receiver,
@@ -187,6 +191,8 @@ impl Tvu {
             exit.clone(),
         );
 
+        // shred_sigverify
+        // todo 暂时去掉
         let (verified_sender, verified_receiver) = unbounded();
         let (retransmit_sender, retransmit_receiver) = unbounded();
         let shred_sigverify = solana_turbine::sigverify_shreds::spawn_shred_sigverify(
@@ -215,6 +221,9 @@ impl Tvu {
             unbounded();
         let (dumped_slots_sender, dumped_slots_receiver) = unbounded();
         let (popular_pruned_forks_sender, popular_pruned_forks_receiver) = unbounded();
+
+        // window_service 处理传入的数据碎片，保存在 blockStore 并且 需要时转发
+        // todo review 保存在 blockStore
         let window_service = {
             let epoch_schedule = bank_forks
                 .read()
@@ -254,6 +263,8 @@ impl Tvu {
         };
 
         let (cluster_slots_update_sender, cluster_slots_update_receiver) = unbounded();
+
+        // todo review cluster service
         let cluster_slots_service = ClusterSlotsService::new(
             blockstore.clone(),
             cluster_slots.clone(),
@@ -285,25 +296,27 @@ impl Tvu {
         };
 
         let (voting_sender, voting_receiver) = unbounded();
-        let voting_service = VotingService::new(
-            voting_receiver,
-            cluster_info.clone(),
-            poh_recorder.clone(),
-            tower_storage,
-        );
+        // todo vote service
+        // let voting_service = VotingService::new(
+        //     voting_receiver,
+        //     cluster_info.clone(),
+        //     poh_recorder.clone(),
+        //     tower_storage,
+        // );
 
-        let warm_quic_cache_service = connection_cache.and_then(|connection_cache| {
-            if connection_cache.use_quic() {
-                Some(WarmQuicCacheService::new(
-                    connection_cache.clone(),
-                    cluster_info.clone(),
-                    poh_recorder.clone(),
-                    exit.clone(),
-                ))
-            } else {
-                None
-            }
-        });
+        let warm_quic_cache_service = None;
+        //     connection_cache.and_then(|connection_cache| {
+        //     if connection_cache.use_quic() {
+        //         Some(WarmQuicCacheService::new(
+        //             connection_cache.clone(),
+        //             cluster_info.clone(),
+        //             poh_recorder.clone(),
+        //             exit.clone(),
+        //         ))
+        //     } else {
+        //         None
+        //     }
+        // });
 
         let (cost_update_sender, cost_update_receiver) = unbounded();
         let cost_update_service = CostUpdateService::new(blockstore.clone(), cost_update_receiver);
@@ -365,7 +378,7 @@ impl Tvu {
             replay_stage,
             blockstore_cleanup_service,
             cost_update_service,
-            voting_service,
+            // voting_service,
             warm_quic_cache_service,
             drop_bank_service,
             duplicate_shred_listener,
@@ -383,7 +396,7 @@ impl Tvu {
         }
         self.replay_stage.join()?;
         self.cost_update_service.join()?;
-        self.voting_service.join()?;
+        // self.voting_service.join()?;
         if let Some(warmup_service) = self.warm_quic_cache_service {
             warmup_service.join()?;
         }

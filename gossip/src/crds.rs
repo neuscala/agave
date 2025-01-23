@@ -65,6 +65,7 @@ const VOTE_SLOTS_METRICS_CAP: usize = 100;
 // log2(500k) = ~18.9.
 const SIGNATURE_SAMPLE_LEADING_ZEROS: u32 = 19;
 
+// todo review crds
 pub struct Crds {
     /// Stores the map of labels and values
     table: IndexMap<CrdsValueLabel, VersionedCrdsValue>,

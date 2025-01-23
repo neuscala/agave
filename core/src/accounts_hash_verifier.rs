@@ -44,6 +44,7 @@ impl AccountsHashVerifier {
         snapshot_config: SnapshotConfig,
     ) -> Self {
         // If there are no accounts packages to process, limit how often we re-check
+        // 1个块 400ms，检查一次
         const LOOP_LIMITER: Duration = Duration::from_millis(DEFAULT_MS_PER_SLOT);
         let t_accounts_hash_verifier = Builder::new()
             .name("solAcctHashVer".to_string())

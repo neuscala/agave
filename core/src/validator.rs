@@ -526,37 +526,42 @@ impl Validator {
         info!("identity pubkey: {id}");
         info!("vote account pubkey: {vote_account}");
 
+        // 检查网络状态，没啥用
         if !config.no_os_network_stats_reporting {
             verify_net_stats_access()
                 .map_err(|err| format!("Failed to access network stats: {err:?}"))?;
         }
 
         // 可变，默认不可变
+        // bank 状态通知列表，可删
         let mut bank_notification_senders = Vec::new();
 
         // 多线程共享
+        // 退出标记
         let exit = Arc::new(AtomicBool::new(false));
 
         // 插件服务
-        let geyser_plugin_service =
-            if let Some(geyser_plugin_config_files) = &config.on_start_geyser_plugin_config_files {
-                let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
-                bank_notification_senders.push(confirmed_bank_sender);
-                let rpc_to_plugin_manager_receiver_and_exit =
-                    rpc_to_plugin_manager_receiver.map(|receiver| (receiver, exit.clone()));
-                Some(
-                    GeyserPluginService::new_with_receiver(
-                        confirmed_bank_receiver,
-                        geyser_plugin_config_files,
-                        rpc_to_plugin_manager_receiver_and_exit,
-                    )
-                    .map_err(|err| format!("Failed to load the Geyser plugin: {err:?}"))?,
-                )
-            } else {
-                None
-            };
+        // 设置为空
+        let geyser_plugin_service = None;
+            // if let Some(geyser_plugin_config_files) = &config.on_start_geyser_plugin_config_files {
+            //     let (confirmed_bank_sender, confirmed_bank_receiver) = unbounded();
+            //     bank_notification_senders.push(confirmed_bank_sender);
+            //     let rpc_to_plugin_manager_receiver_and_exit =
+            //         rpc_to_plugin_manager_receiver.map(|receiver| (receiver, exit.clone()));
+            //     Some(
+            //         GeyserPluginService::new_with_receiver(
+            //             confirmed_bank_receiver,
+            //             geyser_plugin_config_files,
+            //             rpc_to_plugin_manager_receiver_and_exit,
+            //         )
+            //         .map_err(|err| format!("Failed to load the Geyser plugin: {err:?}"))?,
+            //     )
+            // } else {
+            //     None
+            // };
 
         // vote info
+        // 不投票， authorized_voter_keypairs 清空
         if config.voting_disabled {
             warn!("voting disabled");
             authorized_voter_keypairs.write().unwrap().clear();
@@ -566,6 +571,7 @@ impl Validator {
             }
         }
 
+        // 打印 cluster_entrypoint 信息
         for cluster_entrypoint in &cluster_entrypoints {
             info!("entrypoint: {:?}", cluster_entrypoint);
         }
@@ -601,10 +607,10 @@ impl Validator {
             open_genesis_config(ledger_path, config.max_genesis_archive_unpacked_size)
                 .map_err(|err| format!("Failed to open genesis config: {err}"))?;
 
-        // 检查
+        // 检查 cluster 是否是主网、dev、testnet
         metrics_config_sanity_check(genesis_config.cluster_type)?;
 
-        // 移除不正确的数据碎片
+        // 移除数据库中不正确的数据碎片
         if let Some(expected_shred_version) = config.expected_shred_version {
             if let Some(wait_for_supermajority_slot) = config.wait_for_supermajority {
                 *start_progress.write().unwrap() = ValidatorStartProgress::CleaningBlockStore;
@@ -626,15 +632,18 @@ impl Validator {
         info!("Cleaning accounts paths..");
         *start_progress.write().unwrap() = ValidatorStartProgress::CleaningAccounts;
         let mut timer = Measure::start("clean_accounts_paths");
+        // 清空账户路径。后续重新创建
         cleanup_accounts_paths(config);
         timer.stop();
         info!("Cleaning accounts paths done. {timer}");
 
+        // 清理不完整、旧快照
         snapshot_utils::purge_incomplete_bank_snapshots(&config.snapshot_config.bank_snapshots_dir);
         snapshot_utils::purge_old_bank_snapshots_at_startup(
             &config.snapshot_config.bank_snapshots_dir,
         );
 
+        // 清理孤立快照
         info!("Cleaning orphaned account snapshot directories..");
         let mut timer = Measure::start("clean_orphaned_account_snapshot_dirs");
         clean_orphaned_account_snapshot_dirs(
@@ -646,6 +655,7 @@ impl Validator {
         info!("Cleaning orphaned account snapshot directories done. {timer}");
 
         // The accounts hash cache dir was renamed, so cleanup any old dirs that exist.
+        // 清理旧的账户 hash 缓存目录
         let accounts_hash_cache_path = config
             .accounts_db_config
             .as_ref()
@@ -664,6 +674,7 @@ impl Validator {
             }
         }
 
+        // 注册退出事件
         {
             let exit = exit.clone();
             config
@@ -673,6 +684,7 @@ impl Validator {
                 .register_exit(Box::new(move || exit.store(true, Ordering::Relaxed)));
         }
 
+        // 插件服务，目前都关闭了
         let accounts_update_notifier = geyser_plugin_service
             .as_ref()
             .and_then(|geyser_plugin_service| geyser_plugin_service.get_accounts_update_notifier());
@@ -698,6 +710,7 @@ impl Validator {
             entry_notifier.is_some()
         );
 
+        // 系统状态监控，可以考虑加回去
         // let system_monitor_service = Some(SystemMonitorService::new(
         //     exit.clone(),
         //     SystemMonitorStatsReportConfig {
@@ -708,11 +721,13 @@ impl Validator {
         //     },
         // ));
 
+        // 创建无缓冲通道，发送端发送消息，接收端接收
         let (poh_timing_point_sender, poh_timing_point_receiver) = unbounded();
+        // 处理块时 的 报告时间点 服务
         let poh_timing_report_service =
             PohTimingReportService::new(poh_timing_point_receiver, exit.clone());
 
-        // 加载 blockstore
+        // 加载 blockstore，rebuild
         let (
             genesis_config,
             bank_forks,
@@ -750,6 +765,7 @@ impl Validator {
             info!("Hard forks: {:?}", hard_forks);
         }
 
+        // 节点设置
         node.info.set_wallclock(timestamp());
         node.info.set_shred_version(compute_shred_version(
             &genesis_config.hash(),
@@ -758,6 +774,7 @@ impl Validator {
 
         Self::print_node_info(&node);
 
+        // 校验 expected_shred_version
         if let Some(expected_shred_version) = config.expected_shred_version {
             if expected_shred_version != node.info.shred_version() {
                 return Err(format!(
@@ -773,8 +790,11 @@ impl Validator {
             identity_keypair.clone(),
             socket_addr_space,
         );
+        // contact-debug-interval print 时间间隔
         cluster_info.set_contact_debug_interval(config.contact_debug_interval);
+        // 入口
         cluster_info.set_entrypoints(cluster_entrypoints);
+        // 保存间隔
         cluster_info.restore_contact_info(ledger_path, config.contact_save_interval);
         let cluster_info = Arc::new(cluster_info);
 
@@ -783,28 +803,30 @@ impl Validator {
             config.accounts_hash_interval_slots,
         ));
 
-        let (snapshot_package_sender, snapshot_packager_service) =
-            if config.snapshot_config.should_generate_snapshots() {
-                let enable_gossip_push = true;
-                let (snapshot_package_sender, snapshot_package_receiver) =
-                    crossbeam_channel::unbounded();
-                let snapshot_packager_service = SnapshotPackagerService::new(
-                    snapshot_package_sender.clone(),
-                    snapshot_package_receiver,
-                    starting_snapshot_hashes,
-                    exit.clone(),
-                    cluster_info.clone(),
-                    config.snapshot_config.clone(),
-                    enable_gossip_push,
-                );
-                (
-                    Some(snapshot_package_sender),
-                    Some(snapshot_packager_service),
-                )
-            } else {
-                (None, None)
-            };
+        // 是否生成新的snapshot，先设置为 None，不生成
+        let (snapshot_package_sender, snapshot_packager_service) = (None, None);
+            // if config.snapshot_config.should_generate_snapshots() {
+            //     let enable_gossip_push = true;
+            //     let (snapshot_package_sender, snapshot_package_receiver) =
+            //         crossbeam_channel::unbounded();
+            //     let snapshot_packager_service = SnapshotPackagerService::new(
+            //         snapshot_package_sender.clone(),
+            //         snapshot_package_receiver,
+            //         starting_snapshot_hashes,
+            //         exit.clone(),
+            //         cluster_info.clone(),
+            //         config.snapshot_config.clone(),
+            //         enable_gossip_push,
+            //     );
+            //     (
+            //         Some(snapshot_package_sender),
+            //         Some(snapshot_packager_service),
+            //     )
+            // } else {
+            //     (None, None)
+            // };
 
+        // accounts hash verifier
         let (accounts_package_sender, accounts_package_receiver) = crossbeam_channel::unbounded();
         let accounts_hash_verifier = AccountsHashVerifier::new(
             accounts_package_sender.clone(),
@@ -817,6 +839,7 @@ impl Validator {
         let (snapshot_request_sender, snapshot_request_receiver) = unbounded();
         let accounts_background_request_sender =
             AbsRequestSender::new(snapshot_request_sender.clone());
+        // snapshot 请求服务
         let snapshot_request_handler = SnapshotRequestHandler {
             snapshot_config: config.snapshot_config.clone(),
             snapshot_request_sender,
@@ -833,6 +856,8 @@ impl Validator {
         } else {
             None
         };
+        // Service to clean up dead slots in accounts_db
+        // 清理accounts_db中死掉的slot？
         let accounts_background_service = AccountsBackgroundService::new(
             bank_forks.clone(),
             exit.clone(),
@@ -848,12 +873,14 @@ impl Validator {
             config.block_verification_method, config.block_production_method
         );
 
+        // vote 重放
         let (replay_vote_sender, replay_vote_receiver) = unbounded();
 
         // block min prioritization fee cache should be readable by RPC, and writable by validator
         // (by both replay stage and banking stage)
         let prioritization_fee_cache = Arc::new(PrioritizationFeeCache::default());
 
+        // 块验证方法，默认走 BlockstoreProcessor
         match &config.block_verification_method {
             BlockVerificationMethod::BlockstoreProcessor => {
                 info!("no scheduler pool is installed for block verification...");
@@ -883,6 +910,7 @@ impl Validator {
         let entry_notification_sender = entry_notifier_service
             .as_ref()
             .map(|service| service.sender());
+        // 初始化，处理blockStore
         let mut process_blockstore = ProcessBlockStore::new(
             &id,
             vote_account,
@@ -900,31 +928,35 @@ impl Validator {
             config,
         );
 
-        maybe_warp_slot(
-            config,
-            &mut process_blockstore,
-            ledger_path,
-            &bank_forks,
-            &leader_schedule_cache,
-            &accounts_background_request_sender,
-        )?;
+        // maybe_warp_slot(
+        //     config,
+        //     &mut process_blockstore,
+        //     ledger_path,
+        //     &bank_forks,
+        //     &leader_schedule_cache,
+        //     &accounts_background_request_sender,
+        // )?;
 
-        if config.process_ledger_before_services {
-            process_blockstore.process()?;
-        }
+        // 先处理 blockStore
+        // if config.process_ledger_before_services {
+        //     process_blockstore.process()?;
+        // }
         *start_progress.write().unwrap() = ValidatorStartProgress::StartingServices;
 
-        let sample_performance_service =
-            if config.rpc_addrs.is_some() && config.rpc_config.enable_rpc_transaction_history {
-                Some(SamplePerformanceService::new(
-                    &bank_forks,
-                    blockstore.clone(),
-                    exit.clone(),
-                ))
-            } else {
-                None
-            };
+        // todo tmp remove
+        // let sample_performance_service =
+        //     if config.rpc_addrs.is_some() && config.rpc_config.enable_rpc_transaction_history {
+        //         Some(SamplePerformanceService::new(
+        //             &bank_forks,
+        //             blockstore.clone(),
+        //             exit.clone(),
+        //         ))
+        //     } else {
+        //         None
+        //     };
 
+        // 初始化 block_commitment_cache
+        // todo 考虑删掉
         let mut block_commitment_cache = BlockCommitmentCache::default();
         let bank_forks_guard = bank_forks.read().unwrap();
         block_commitment_cache.initialize_slots(
@@ -999,6 +1031,7 @@ impl Validator {
 
         let rpc_override_health_check =
             Arc::new(AtomicBool::new(config.rpc_config.disable_health_check));
+        // 订阅相关都设置为 None
         let (
             json_rpc_service,
             pubsub_service,
@@ -1007,127 +1040,133 @@ impl Validator {
             // rpc_completed_slots_service,
             optimistically_confirmed_bank_tracker,
             bank_notification_sender,
-        ) = if let Some((rpc_addr, rpc_pubsub_addr)) = config.rpc_addrs {
-            assert_eq!(
-                node.info
-                    .rpc()
-                    .map(|addr| socket_addr_space.check(&addr))
-                    .ok(),
-                node.info
-                    .rpc_pubsub()
-                    .map(|addr| socket_addr_space.check(&addr))
-                    .ok()
-            );
-            let (bank_notification_sender, bank_notification_receiver) = unbounded();
-            let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
-                Some(Arc::new(RwLock::new(bank_notification_senders)))
-            } else {
-                None
-            };
+        ) = (None, None, None, None, None, None);
+        //     if let Some((rpc_addr, rpc_pubsub_addr)) = config.rpc_addrs {
+        //     assert_eq!(
+        //         node.info
+        //             .rpc()
+        //             .map(|addr| socket_addr_space.check(&addr))
+        //             .ok(),
+        //         node.info
+        //             .rpc_pubsub()
+        //             .map(|addr| socket_addr_space.check(&addr))
+        //             .ok()
+        //     );
+        //     let (bank_notification_sender, bank_notification_receiver) = unbounded();
+        //     let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
+        //         Some(Arc::new(RwLock::new(bank_notification_senders)))
+        //     } else {
+        //         None
+        //     };
+        //
+        //     // let json_rpc_service = JsonRpcService::new(
+        //     //     rpc_addr,
+        //     //     config.rpc_config.clone(),
+        //     //     Some(config.snapshot_config.clone()),
+        //     //     bank_forks.clone(),
+        //     //     block_commitment_cache.clone(),
+        //     //     blockstore.clone(),
+        //     //     cluster_info.clone(),
+        //     //     Some(poh_recorder.clone()),
+        //     //     genesis_config.hash(),
+        //     //     ledger_path,
+        //     //     config.validator_exit.clone(),
+        //     //     exit.clone(),
+        //     //     rpc_override_health_check.clone(),
+        //     //     startup_verification_complete,
+        //     //     optimistically_confirmed_bank.clone(),
+        //     //     config.send_transaction_service_config.clone(),
+        //     //     max_slots.clone(),
+        //     //     leader_schedule_cache.clone(),
+        //     //     connection_cache.clone(),
+        //     //     max_complete_transaction_status_slot,
+        //     //     max_complete_rewards_slot,
+        //     //     prioritization_fee_cache.clone(),
+        //     // )?;
+        //
+        //     // 当前无 full api
+        //     let pubsub_service = None;
+        //     //     if !config.rpc_config.full_api {
+        //     //     None
+        //     // } else {
+        //     //     let (trigger, pubsub_service) = PubSubService::new(
+        //     //         config.pubsub_config.clone(),
+        //     //         &rpc_subscriptions,
+        //     //         rpc_pubsub_addr,
+        //     //     );
+        //     //     config
+        //     //         .validator_exit
+        //     //         .write()
+        //     //         .unwrap()
+        //     //         .register_exit(Box::new(move || trigger.cancel()));
+        //     //
+        //     //     Some(pubsub_service)
+        //     // };
+        //
+        //     // 当前无 full api
+        //     let (completed_data_sets_sender, completed_data_sets_service) = (None, None);
+        //         // if !config.rpc_config.full_api {
+        //         //     (None, None)
+        //         // } else {
+        //         //     let (completed_data_sets_sender, completed_data_sets_receiver) =
+        //         //         bounded(MAX_COMPLETED_DATA_SETS_IN_CHANNEL);
+        //         //     let completed_data_sets_service = CompletedDataSetsService::new(
+        //         //         completed_data_sets_receiver,
+        //         //         blockstore.clone(),
+        //         //         rpc_subscriptions.clone(),
+        //         //         exit.clone(),
+        //         //         max_slots.clone(),
+        //         //     );
+        //         //     (
+        //         //         Some(completed_data_sets_sender),
+        //         //         Some(completed_data_sets_service),
+        //         //     )
+        //         // };
+        //
+        //     // let rpc_completed_slots_service = if !config.rpc_config.full_api {
+        //     //     None
+        //     // } else {
+        //     //     None
+        //     //     let (completed_slots_sender, completed_slots_receiver) =
+        //     //         bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
+        //     //     blockstore.add_completed_slots_signal(completed_slots_sender);
+        //     //
+        //     //     Some(RpcCompletedSlotsService::spawn(
+        //     //         completed_slots_receiver,
+        //     //         rpc_subscriptions.clone(),
+        //     //         exit.clone(),
+        //     //     ))
+        //     // };
+        //
+        //     // 订阅相关，先删掉
+        //     let optimistically_confirmed_bank_tracker = None;
+        //         // Some(OptimisticallyConfirmedBankTracker::new(
+        //         //     bank_notification_receiver,
+        //         //     exit.clone(),
+        //         //     bank_forks.clone(),
+        //         //     optimistically_confirmed_bank,
+        //         //     rpc_subscriptions.clone(),
+        //         //     confirmed_bank_subscribers,
+        //         //     prioritization_fee_cache.clone(),
+        //         // ));
+        //     let bank_notification_sender_config = Some(BankNotificationSenderConfig {
+        //         sender: bank_notification_sender,
+        //         should_send_parents: geyser_plugin_service.is_some(),
+        //     });
+        //     (
+        //         None,
+        //         pubsub_service,
+        //         completed_data_sets_sender,
+        //         completed_data_sets_service,
+        //         // rpc_completed_slots_service,
+        //         optimistically_confirmed_bank_tracker,
+        //         bank_notification_sender_config,
+        //     )
+        // } else {
+        //     (None, None, None, None, None, None)
+        // };
 
-            // let json_rpc_service = JsonRpcService::new(
-            //     rpc_addr,
-            //     config.rpc_config.clone(),
-            //     Some(config.snapshot_config.clone()),
-            //     bank_forks.clone(),
-            //     block_commitment_cache.clone(),
-            //     blockstore.clone(),
-            //     cluster_info.clone(),
-            //     Some(poh_recorder.clone()),
-            //     genesis_config.hash(),
-            //     ledger_path,
-            //     config.validator_exit.clone(),
-            //     exit.clone(),
-            //     rpc_override_health_check.clone(),
-            //     startup_verification_complete,
-            //     optimistically_confirmed_bank.clone(),
-            //     config.send_transaction_service_config.clone(),
-            //     max_slots.clone(),
-            //     leader_schedule_cache.clone(),
-            //     connection_cache.clone(),
-            //     max_complete_transaction_status_slot,
-            //     max_complete_rewards_slot,
-            //     prioritization_fee_cache.clone(),
-            // )?;
-
-            let pubsub_service = if !config.rpc_config.full_api {
-                None
-            } else {
-                let (trigger, pubsub_service) = PubSubService::new(
-                    config.pubsub_config.clone(),
-                    &rpc_subscriptions,
-                    rpc_pubsub_addr,
-                );
-                config
-                    .validator_exit
-                    .write()
-                    .unwrap()
-                    .register_exit(Box::new(move || trigger.cancel()));
-
-                Some(pubsub_service)
-            };
-
-            let (completed_data_sets_sender, completed_data_sets_service) =
-                if !config.rpc_config.full_api {
-                    (None, None)
-                } else {
-                    let (completed_data_sets_sender, completed_data_sets_receiver) =
-                        bounded(MAX_COMPLETED_DATA_SETS_IN_CHANNEL);
-                    let completed_data_sets_service = CompletedDataSetsService::new(
-                        completed_data_sets_receiver,
-                        blockstore.clone(),
-                        rpc_subscriptions.clone(),
-                        exit.clone(),
-                        max_slots.clone(),
-                    );
-                    (
-                        Some(completed_data_sets_sender),
-                        Some(completed_data_sets_service),
-                    )
-                };
-
-            // let rpc_completed_slots_service = if !config.rpc_config.full_api {
-            //     None
-            // } else {
-            //     None
-            //     let (completed_slots_sender, completed_slots_receiver) =
-            //         bounded(MAX_COMPLETED_SLOTS_IN_CHANNEL);
-            //     blockstore.add_completed_slots_signal(completed_slots_sender);
-            //
-            //     Some(RpcCompletedSlotsService::spawn(
-            //         completed_slots_receiver,
-            //         rpc_subscriptions.clone(),
-            //         exit.clone(),
-            //     ))
-            // };
-
-            let optimistically_confirmed_bank_tracker =
-                Some(OptimisticallyConfirmedBankTracker::new(
-                    bank_notification_receiver,
-                    exit.clone(),
-                    bank_forks.clone(),
-                    optimistically_confirmed_bank,
-                    rpc_subscriptions.clone(),
-                    confirmed_bank_subscribers,
-                    prioritization_fee_cache.clone(),
-                ));
-            let bank_notification_sender_config = Some(BankNotificationSenderConfig {
-                sender: bank_notification_sender,
-                should_send_parents: geyser_plugin_service.is_some(),
-            });
-            (
-                None,
-                pubsub_service,
-                completed_data_sets_sender,
-                completed_data_sets_service,
-                // rpc_completed_slots_service,
-                optimistically_confirmed_bank_tracker,
-                bank_notification_sender_config,
-            )
-        } else {
-            (None, None, None, None, None, None)
-        };
-
+        // 达到指定slot退出
         if config.halt_at_slot.is_some() {
             // Simulate a confirmed root to avoid RPC errors with CommitmentConfig::finalized() and
             // to ensure RPC endpoints like getConfirmedBlock, which require a confirmed root, work
@@ -1150,6 +1189,7 @@ impl Validator {
             )),
         };
 
+        // stats reporter
         let (stats_reporter_sender, stats_reporter_receiver) = unbounded();
 
         let stats_reporter_service =
@@ -1172,6 +1212,7 @@ impl Validator {
             config.repair_whitelist.clone(),
         );
         let (repair_quic_endpoint_sender, repair_quic_endpoint_receiver) = unbounded();
+        // todo review ServeRepairService
         let serve_repair_service = ServeRepairService::new(
             serve_repair,
             // Incoming UDP repair requests are adapted into RemoteRequest
@@ -1185,6 +1226,7 @@ impl Validator {
             exit.clone(),
         );
 
+        // 等待其他节点启动，应该为false
         let waited_for_supermajority = wait_for_supermajority(
             config,
             Some(&mut process_blockstore),
@@ -1201,6 +1243,7 @@ impl Validator {
         let wait_for_vote_to_start_leader =
             !waited_for_supermajority && !config.no_wait_for_vote_to_start_leader;
 
+        // poh 服务，记录 ticks（表示时间点的单位，1s == 160 ticks）
         let poh_service = PohService::new(
             poh_recorder.clone(),
             &genesis_config.poh_config,
@@ -1224,6 +1267,7 @@ impl Validator {
         let (gossip_verified_vote_hash_sender, gossip_verified_vote_hash_receiver) = unbounded();
         let (duplicate_confirmed_slot_sender, duplicate_confirmed_slots_receiver) = unbounded();
 
+        // banking trace 存储
         let (banking_tracer, tracer_thread) =
             BankingTracer::new((config.banking_trace_dir_byte_limit > 0).then_some((
                 &blockstore.banking_trace_path(),
@@ -1249,6 +1293,7 @@ impl Validator {
         // runtime will cause panic at drop.
         // Outside test-validator crate, we always need a tokio runtime (and
         // the respective handle) to initialize the turbine QUIC endpoint.
+        // 只适用于 test-validator
         let current_runtime_handle = tokio::runtime::Handle::try_current();
         let turbine_quic_endpoint_runtime = (current_runtime_handle.is_err()
             && genesis_config.cluster_type != ClusterType::MainnetBeta)
@@ -1260,6 +1305,7 @@ impl Validator {
                     .unwrap()
             });
         let (turbine_quic_endpoint_sender, turbine_quic_endpoint_receiver) = unbounded();
+        // 主网是 (None, sender, None)
         let (
             turbine_quic_endpoint,
             turbine_quic_endpoint_sender,
@@ -1282,7 +1328,8 @@ impl Validator {
             .unwrap()
         };
 
-        // Repair quic endpoint.
+        // Repair quic endpoint. 主网为 None
+        // Tokio 运行时环境，Tokio 是一个高性能的并发运行时（runtime）库
         let repair_quic_endpoint_runtime = (current_runtime_handle.is_err()
             && genesis_config.cluster_type != ClusterType::MainnetBeta)
             .then(|| {
@@ -1311,12 +1358,16 @@ impl Validator {
                 .unwrap()
             };
 
+        // Automatic repair and restart protocol during a cluster restart
         let in_wen_restart = config.wen_restart_proto_path.is_some() && !waited_for_supermajority;
         let wen_restart_repair_slots = if in_wen_restart {
             Some(Arc::new(RwLock::new(Vec::new())))
         } else {
             None
         };
+
+        // todo review Tower BFT
+        // https://news.qq.com/rain/a/20240915A03BD600?suid=&media_id=
         let tower = match process_blockstore.process_to_create_tower() {
             Ok(tower) => {
                 info!("Tower state: {:?}", tower);
@@ -1337,6 +1388,7 @@ impl Validator {
         let cluster_slots =
             Arc::new(crate::cluster_slots_service::cluster_slots::ClusterSlots::default());
 
+        // 主要内容
         let tvu = Tvu::new(
             vote_account,
             authorized_voter_keypairs,
@@ -1948,18 +2000,19 @@ fn load_blockstore(
     let enable_rpc_transaction_history =
         config.rpc_addrs.is_some() && config.rpc_config.enable_rpc_transaction_history;
     let is_plugin_transaction_history_required = transaction_notifier.as_ref().is_some();
-    let transaction_history_services =
-        if enable_rpc_transaction_history || is_plugin_transaction_history_required {
-            initialize_rpc_transaction_history_services(
-                blockstore.clone(),
-                exit.clone(),
-                enable_rpc_transaction_history,
-                config.rpc_config.enable_extended_tx_metadata_storage,
-                transaction_notifier,
-            )
-        } else {
-            TransactionHistoryServices::default()
-        };
+    // transaction history 服务，暂时关闭
+    let transaction_history_services = TransactionHistoryServices::default();
+        // if enable_rpc_transaction_history || is_plugin_transaction_history_required {
+        //     initialize_rpc_transaction_history_services(
+        //         blockstore.clone(),
+        //         exit.clone(),
+        //         enable_rpc_transaction_history,
+        //         config.rpc_config.enable_extended_tx_metadata_storage,
+        //         transaction_notifier,
+        //     )
+        // } else {
+        //     TransactionHistoryServices::default()
+        // };
 
     let entry_notifier_service = entry_notifier
         .map(|entry_notifier| EntryNotifierService::new(entry_notifier, exit.clone()));

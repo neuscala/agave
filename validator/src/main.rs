@@ -1850,13 +1850,14 @@ pub fn main() {
     // start progress
     let start_progress = Arc::new(RwLock::new(ValidatorStartProgress::default()));
     let admin_service_post_init = Arc::new(RwLock::new(None));
-    let (rpc_to_plugin_manager_sender, rpc_to_plugin_manager_receiver) =
-        if starting_with_geyser_plugins {
-            let (sender, receiver) = unbounded();
-            (Some(sender), Some(receiver))
-        } else {
-            (None, None)
-        };
+    // 没有订阅
+    let (rpc_to_plugin_manager_sender, rpc_to_plugin_manager_receiver) = (None, None);
+        // if starting_with_geyser_plugins {
+        //     let (sender, receiver) = unbounded();
+        //     (Some(sender), Some(receiver))
+        // } else {
+        //     (None, None)
+        // };
     admin_rpc_service::run(
         &ledger_path,
         admin_rpc_service::AdminRpcRequestMetadata {
@@ -1957,6 +1958,7 @@ pub fn main() {
 
     let mut node = Node::new_with_external_ip(&identity_keypair.pubkey(), node_config);
 
+    // todo review restricted-repair-only-mode
     if restricted_repair_only_mode {
         // When in --restricted_repair_only_mode is enabled only the gossip and repair ports
         // need to be reachable by the entrypoint to respond to gossip pull requests and repair
@@ -1970,6 +1972,7 @@ pub fn main() {
         node.sockets.ip_echo = None;
     }
 
+    // 目前是 private rpc
     if !private_rpc {
         macro_rules! set_socket {
             ($method:ident, $addr:expr, $name:literal) => {
@@ -2040,6 +2043,7 @@ pub fn main() {
     node.info.hot_swap_pubkey(identity_keypair.pubkey());
 
     // 初始化 validator
+    // todo review ！！！
     let validator = Validator::new(
         node,
         identity_keypair,
@@ -2089,7 +2093,7 @@ pub fn main() {
     //             ),
     //         )
     // }
-    // 运行
+    // 挂起
     validator.join();
     info!("Validator exiting..");
 }

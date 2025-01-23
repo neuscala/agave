@@ -21,7 +21,8 @@ use {
 /// The maximum number of blocks to keep in `PrioritizationFeeCache`, ie.
 /// the amount of history generally desired to estimate the prioritization fee needed to
 /// land a transaction in the current block.
-const MAX_NUM_RECENT_BLOCKS: u64 = 150;
+const MAX_NUM_RECENT_BLOCKS: u64 = 10;
+// const MAX_NUM_RECENT_BLOCKS: u64 = 150;
 
 /// Thers is no guarantee that slots coming in order, we keep extra slots in the buffer.
 const MAX_UNFINALIZED_SLOTS: u64 = 128;
