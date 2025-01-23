@@ -1053,11 +1053,11 @@ impl Validator {
                     .ok()
             );
             let (bank_notification_sender, bank_notification_receiver) = unbounded();
-            // let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
-            //     Some(Arc::new(RwLock::new(bank_notification_senders)))
-            // } else {
-            //     None
-            // };
+            let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
+                Some(Arc::new(RwLock::new(bank_notification_senders)))
+            } else {
+                None
+            };
 
             // let json_rpc_service = JsonRpcService::new(
             //     rpc_addr,
@@ -1138,16 +1138,16 @@ impl Validator {
             // };
 
             // 订阅相关，先删掉
-            let optimistically_confirmed_bank_tracker = None;
-                // Some(OptimisticallyConfirmedBankTracker::new(
-                //     bank_notification_receiver,
-                //     exit.clone(),
-                //     bank_forks.clone(),
-                //     optimistically_confirmed_bank,
-                //     rpc_subscriptions.clone(),
-                //     confirmed_bank_subscribers,
-                //     prioritization_fee_cache.clone(),
-                // ));
+            let optimistically_confirmed_bank_tracker =
+                Some(OptimisticallyConfirmedBankTracker::new(
+                    bank_notification_receiver,
+                    exit.clone(),
+                    bank_forks.clone(),
+                    optimistically_confirmed_bank,
+                    rpc_subscriptions.clone(),
+                    confirmed_bank_subscribers,
+                    prioritization_fee_cache.clone(),
+                ));
             let bank_notification_sender_config = Some(BankNotificationSenderConfig {
                 sender: bank_notification_sender,
                 should_send_parents: geyser_plugin_service.is_some(),
