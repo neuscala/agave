@@ -480,7 +480,7 @@ pub struct Validator {
     poh_recorder: Arc<RwLock<PohRecorder>>,
     poh_service: PohService,
     // tpu: Option<Tpu>,
-    // tvu: Tvu,
+    tvu: Tvu,
     ip_echo_server: Option<solana_net_utils::IpEchoServer>,
     pub cluster_info: Arc<ClusterInfo>,
     pub bank_forks: Arc<RwLock<BankForks>>,
@@ -698,15 +698,15 @@ impl Validator {
             entry_notifier.is_some()
         );
 
-        let system_monitor_service = Some(SystemMonitorService::new(
-            exit.clone(),
-            SystemMonitorStatsReportConfig {
-                report_os_memory_stats: !config.no_os_memory_stats_reporting,
-                report_os_network_stats: !config.no_os_network_stats_reporting,
-                report_os_cpu_stats: !config.no_os_cpu_stats_reporting,
-                report_os_disk_stats: !config.no_os_disk_stats_reporting,
-            },
-        ));
+        // let system_monitor_service = Some(SystemMonitorService::new(
+        //     exit.clone(),
+        //     SystemMonitorStatsReportConfig {
+        //         report_os_memory_stats: !config.no_os_memory_stats_reporting,
+        //         report_os_network_stats: !config.no_os_network_stats_reporting,
+        //         report_os_cpu_stats: !config.no_os_cpu_stats_reporting,
+        //         report_os_disk_stats: !config.no_os_disk_stats_reporting,
+        //     },
+        // ));
 
         let (poh_timing_point_sender, poh_timing_point_receiver) = unbounded();
         let poh_timing_report_service =
@@ -1217,12 +1217,12 @@ impl Validator {
         );
 
         // todo tvu related
-        // let vote_tracker = Arc::<VoteTracker>::default();
-        //
-        // let (retransmit_slots_sender, retransmit_slots_receiver) = unbounded();
-        // let (verified_vote_sender, verified_vote_receiver) = unbounded();
-        // let (gossip_verified_vote_hash_sender, gossip_verified_vote_hash_receiver) = unbounded();
-        // let (duplicate_confirmed_slot_sender, duplicate_confirmed_slots_receiver) = unbounded();
+        let vote_tracker = Arc::<VoteTracker>::default();
+
+        let (retransmit_slots_sender, retransmit_slots_receiver) = unbounded();
+        let (verified_vote_sender, verified_vote_receiver) = unbounded();
+        let (gossip_verified_vote_hash_sender, gossip_verified_vote_hash_receiver) = unbounded();
+        let (duplicate_confirmed_slot_sender, duplicate_confirmed_slots_receiver) = unbounded();
 
         let (banking_tracer, tracer_thread) =
             BankingTracer::new((config.banking_trace_dir_byte_limit > 0).then_some((
@@ -1240,9 +1240,9 @@ impl Validator {
             info!("Disabled banking trace");
         }
 
-        // let entry_notification_sender = entry_notifier_service
-        //     .as_ref()
-        //     .map(|service| service.sender_cloned());
+        let entry_notification_sender = entry_notifier_service
+            .as_ref()
+            .map(|service| service.sender_cloned());
 
         // test-validator crate may start the validator in a tokio runtime
         // context which forces us to use the same runtime because a nested
@@ -1337,63 +1337,63 @@ impl Validator {
         let cluster_slots =
             Arc::new(crate::cluster_slots_service::cluster_slots::ClusterSlots::default());
 
-        // let tvu = Tvu::new(
-        //     vote_account,
-        //     authorized_voter_keypairs,
-        //     &bank_forks,
-        //     &cluster_info,
-        //     TvuSockets {
-        //         repair: node.sockets.repair.try_clone().unwrap(),
-        //         retransmit: node.sockets.retransmit_sockets,
-        //         fetch: node.sockets.tvu,
-        //         ancestor_hashes_requests: node.sockets.ancestor_hashes_requests,
-        //     },
-        //     blockstore.clone(),
-        //     ledger_signal_receiver,
-        //     &rpc_subscriptions,
-        //     &poh_recorder,
-        //     tower,
-        //     config.tower_storage.clone(),
-        //     &leader_schedule_cache,
-        //     exit.clone(),
-        //     block_commitment_cache,
-        //     config.turbine_disabled.clone(),
-        //     transaction_status_sender.clone(),
-        //     rewards_recorder_sender,
-        //     cache_block_meta_sender,
-        //     entry_notification_sender.clone(),
-        //     vote_tracker.clone(),
-        //     retransmit_slots_sender,
-        //     gossip_verified_vote_hash_receiver,
-        //     verified_vote_receiver,
-        //     replay_vote_sender.clone(),
-        //     completed_data_sets_sender,
-        //     bank_notification_sender.clone(),
-        //     duplicate_confirmed_slots_receiver,
-        //     TvuConfig {
-        //         max_ledger_shreds: config.max_ledger_shreds,
-        //         shred_version: node.info.shred_version(),
-        //         repair_validators: config.repair_validators.clone(),
-        //         repair_whitelist: config.repair_whitelist.clone(),
-        //         wait_for_vote_to_start_leader,
-        //         replay_forks_threads: config.replay_forks_threads,
-        //         replay_transactions_threads: config.replay_transactions_threads,
-        //     },
-        //     &max_slots,
-        //     block_metadata_notifier,
-        //     config.wait_to_vote_slot,
-        //     accounts_background_request_sender.clone(),
-        //     config.runtime_config.log_messages_bytes_limit,
-        //     json_rpc_service.is_some().then_some(&connection_cache), // for the cache warmer only used for STS for RPC service
-        //     &prioritization_fee_cache,
-        //     banking_tracer.clone(),
-        //     turbine_quic_endpoint_sender.clone(),
-        //     turbine_quic_endpoint_receiver,
-        //     repair_quic_endpoint_sender,
-        //     outstanding_repair_requests.clone(),
-        //     cluster_slots.clone(),
-        //     wen_restart_repair_slots.clone(),
-        // )?;
+        let tvu = Tvu::new(
+            vote_account,
+            authorized_voter_keypairs,
+            &bank_forks,
+            &cluster_info,
+            TvuSockets {
+                repair: node.sockets.repair.try_clone().unwrap(),
+                retransmit: node.sockets.retransmit_sockets,
+                fetch: node.sockets.tvu,
+                ancestor_hashes_requests: node.sockets.ancestor_hashes_requests,
+            },
+            blockstore.clone(),
+            ledger_signal_receiver,
+            &rpc_subscriptions,
+            &poh_recorder,
+            tower,
+            config.tower_storage.clone(),
+            &leader_schedule_cache,
+            exit.clone(),
+            block_commitment_cache,
+            config.turbine_disabled.clone(),
+            transaction_status_sender.clone(),
+            rewards_recorder_sender,
+            cache_block_meta_sender,
+            entry_notification_sender.clone(),
+            vote_tracker.clone(),
+            retransmit_slots_sender,
+            gossip_verified_vote_hash_receiver,
+            verified_vote_receiver,
+            replay_vote_sender.clone(),
+            completed_data_sets_sender,
+            bank_notification_sender.clone(),
+            duplicate_confirmed_slots_receiver,
+            TvuConfig {
+                max_ledger_shreds: config.max_ledger_shreds,
+                shred_version: node.info.shred_version(),
+                repair_validators: config.repair_validators.clone(),
+                repair_whitelist: config.repair_whitelist.clone(),
+                wait_for_vote_to_start_leader,
+                replay_forks_threads: config.replay_forks_threads,
+                replay_transactions_threads: config.replay_transactions_threads,
+            },
+            &max_slots,
+            block_metadata_notifier,
+            config.wait_to_vote_slot,
+            accounts_background_request_sender.clone(),
+            config.runtime_config.log_messages_bytes_limit,
+            json_rpc_service.is_some().then_some(&connection_cache), // for the cache warmer only used for STS for RPC service
+            &prioritization_fee_cache,
+            banking_tracer.clone(),
+            turbine_quic_endpoint_sender.clone(),
+            turbine_quic_endpoint_receiver,
+            repair_quic_endpoint_sender,
+            outstanding_repair_requests.clone(),
+            cluster_slots.clone(),
+            wen_restart_repair_slots.clone(),
+        )?;
 
         if in_wen_restart {
             info!("Waiting for wen_restart phase one to finish");
@@ -1506,7 +1506,7 @@ impl Validator {
             snapshot_packager_service,
             completed_data_sets_service,
             // tpu,
-            // tvu,
+            tvu,
             poh_service,
             poh_recorder,
             ip_echo_server,
@@ -1577,8 +1577,8 @@ impl Validator {
         info!("TEST::: dropped cluster_info");
 
         // todo remove services
-        // info!("TEST::: join poh_service");
-        // self.poh_service.join().expect("poh_service");
+        info!("TEST::: join poh_service");
+        self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
         info!("TEST::: dropped poh_recorder");
 
